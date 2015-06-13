@@ -1,0 +1,52 @@
+Grammar -> FuncDecl MainFuncDecl
+
+MainFuncDecl    -> main FuncBody
+
+FuncDecl        -> FuncHeader FuncBody FuncDecl
+FuncDecl        ->
+
+FuncHeader      -> Type identifier ( ParamList )
+ParamList       -> Type identifier ParamListRest
+ParamList       ->
+ParamListRest   -> , Type identifier ParamListRest
+ParamListRest   ->
+
+FuncBody        -> begin VarDecl StatementList ReturnStatement end
+VarDecl         -> Type identifier ; VarDecl
+VarDecl         ->
+ReturnStatement -> return Expr ;
+
+StatementList   -> Statement StatementList
+StatementList   ->
+
+Statement       -> if ( Expr ) then Statement 
+Statement       -> do Statement while ( Expr ) ;
+Statement       -> print ( Expr ) ;
+Statement       -> begin StatementList end
+Statement       -> IdAccess = Expr ;		// Meaning: assignment
+
+Expr            -> Expr op Expr
+Expr            -> ! Expr
+Expr            -> - Expr
+Expr            -> ( Expr )
+Expr            -> IdAccess
+Expr            -> integer
+Expr            -> true
+Expr            -> false
+Expr            -> new int [ Expr ]
+Expr            -> FunctionCall
+Expr		-> identifier . length
+Expr            -> read ( )
+
+IdAccess        -> identifier
+IdAccess        -> identifier [ Expr ]
+
+FunctionCall    -> identifier ( CallParams )
+CallParams      -> Expr CallParamsRest
+CallParams      ->
+CallParamsRest  -> , Expr CallParamsRest
+CallParamsRest  ->
+
+Type            -> int
+Type            -> int[]
+Type            -> boolean
