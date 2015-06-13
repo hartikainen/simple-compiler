@@ -6,8 +6,9 @@
 # directory to PATH run the following command (C shell)
 #   setenv PATH /u/courses/t106550/bin:$PATH
 
-GRAMMAR_FILE="Compiler.atg"
-COCOR="cocor"
+GRAMMAR_FILE="../Compiler.atg"
+#COCOR="cocor"
+COCOR="java -jar ../Coco.jar"
 
 $COCOR $GRAMMAR_FILE
-javac *.java
+javac ../*.java
