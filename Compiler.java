@@ -1,5 +1,6 @@
 import fi.tkk.cs.tkkcc.SlxCompiler;
 import fi.tkk.cs.tkkcc.slx.*;
+import java.io.*;
 
 // import mycompiler.SymbolTable;
 
@@ -11,18 +12,48 @@ public class Compiler implements SlxCompiler {
     private Parser parser;
 
     public static void main(String[] args) {
+        String input_file_path = args[0];
         Compiler compiler = new Compiler();
-        SlxProgram program = compiler.compile(args[0]);
+        SlxProgram program = compiler.compile(input_file_path);
+        String output;
+        String filename = Compiler.parseFilename(input_file_path);
 
-        System.out.println("compiler.isErrors: " + (compiler.isErrors()));
         if (program != null && !compiler.isErrors()) {
+            // System.out.println("No errors found, running the program");
+            System.out.println("No errors found, writing the program to .slx file");
+
+            output = program.toString();
+            try {
+                System.out.println("trying");
+                PrintWriter writer = new PrintWriter("slx/" + filename + ".slx", "UTF-8");
+                writer.print(output);
+                writer.close();
+            } catch (IOException ex) {
+                System.out.println("writer error");
+            }
+
             // Run the program
+        } else {
+            System.out.println("Errors in the compiler");
         }
+
         return;
     }
 
     public Compiler() {
-        return;
+    }
+
+    public static String parseFilename(String filepath) {
+        // e.g. filepath = "./easy/test/assignment.tst"
+        String[] parts;
+        String   filename;
+
+        parts = filepath.split("/"); // parts = [".", "easy", "test", "assignment.tst"]
+        filename = parts[parts.length - 1]; // filename = "assignment.tst"
+        parts = filename.split("\\."); // parts = ["assignment", "tst"]
+        filename = parts[0]; // filename = "assignment"
+
+        return filename;
     }
 
     @Override
@@ -37,6 +68,6 @@ public class Compiler implements SlxCompiler {
         this.parser.st = new SymbolTable(this.parser);
         this.parser.slx = new SlxProgram();
         this.parser.Parse();
-        return null;
+        return parser.slx;
     }
 }
