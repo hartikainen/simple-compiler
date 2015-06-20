@@ -42,7 +42,7 @@ PRODUCTIONS
 
 /*---------------------------------------------------------------------------*/
 
-Grammar
+Compiler
 = MainFuncDecl
 .
 
@@ -54,7 +54,7 @@ MainFuncDecl
 
 /*---------------------------------------------------------------------------*/
 
-Funcbody
+FuncBody
 = "begin" VarDecl StatementList ReturnStatement "end"
 .
 
@@ -84,15 +84,6 @@ Statement
 | "print" "(" Expr ")" ";"
 | "begin" StatementList "end"
 | IdAccess "=" Expr ";"    // Meaning: assignment
-.
-
-/*---------------------------------------------------------------------------*/
-
-Expr
-= BaseExpr op BaseExpr
-| ! BaseExpr
-| - BaseExpr
-| BaseExpr
 .
 
 /*---------------------------------------------------------------------------*/
