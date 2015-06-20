@@ -99,9 +99,11 @@ VarDecl                                 (. String name; int type; int var_count 
 
 /*---------------------------------------------------------------------------*/
 
-ReturnStatement
-=                                        (. int type; .)
-  "return" Expr<out type> ";"
+ReturnStatement                          (. int type; .)
+=
+  "return"
+  Expr<out type>                         (. slx.emit(CommandWord.RET); .)
+  ";"
 .
 
 /*---------------------------------------------------------------------------*/
@@ -118,7 +120,7 @@ Statement
 |                                         (. int type; .)
   "do" Statement "while" "(" Expr<out type> ")" ";"
 |                                         (. int type; .)
-  "print" "(" Expr<out type> ")" ";"
+  "print" "(" Expr<out type> ")" ";"      (. slx.emit(CommandWord.WRI); .)
 | "begin" StatementList "end"
 |                                         (. String name; int type; SymbolTable.Variable var; .)
   Ident<out name>                         (. var = (SymbolTable.Variable) st.findSymbol(name); .)
