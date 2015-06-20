@@ -5,12 +5,13 @@ import fi.tkk.cs.tkkcc.slx.*;
 
 COMPILER Compiler
 
-private Printer printer;
-
 public Parser(Scanner s, Printer p) {
     this(s);
     this.printer = p;
 }
+
+public SymbolTable st;
+private Printer printer;
 
 CHARACTERS
   cr  = '\r'.

@@ -27,13 +27,14 @@ public class Compiler implements SlxCompiler {
 
     @Override
     public boolean isErrors() {
-        return false;//this.parser.errors.count > 0;
+        return this.parser.errors.count > 0;
     }
 
     @Override
     public SlxProgram compile(String sourceFilename) {
         this.scanner = new Scanner(sourceFilename);
         this.parser = new Parser(this.scanner,  new Printer(false));
+        this.parser.st = new SymbolTable(this.parser);
         this.parser.Parse();
         return null;
     }
