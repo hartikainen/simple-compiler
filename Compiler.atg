@@ -136,27 +136,30 @@ Statement
 
 /*---------------------------------------------------------------------------*/
 
-Expr<out int type>                        (. int t1, t2; type = st.BOOLEAN; .)
-= RelExpr<out t1>                         (. checkBoolean(t1); .)
-{ "&&"
+Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
+= RelExpr<out t1>                         (. type = t1; .)
+{                                         (. int t2; .)
+  "&&"                                    (. checkBoolean(t1); .)
   RelExpr<out t2>                         (.
                                              checkBoolean(t2);
                                              slx.emit(CommandWord.REQ);
                                              slx.emit(CommandWord.ENT, 1);
                                              slx.emit(CommandWord.REQ);
+                                             type = st.BOOLEAN;
                                           .)
 }
 .
 
 /*---------------------------------------------------------------------------*/
 
-RelExpr<out int type>                     (. int t1, t2; type = st.BOOLEAN; .)
-= SimExpr<out t1>                         (. checkInt(t1); .)
-{                                         (. CommandWord cw; .)
-  RelOp<out cw>
+RelExpr<out int type>                     (. int t1; type = st.UNDEFINED; .)
+= SimExpr<out t1>                         (. type = t1; .)
+{                                         (. int t2; CommandWord cw; .)
+  RelOp<out cw>                           (. checkInt(t1); .)
   SimExpr<out t2>                         (.
                                              checkInt(t2);
                                              slx.emit(cw);
+                                             type = st.BOOLEAN;
                                           .)
 }
 .
@@ -170,10 +173,10 @@ SimExpr<out int type>                     (. type = st.UNDEFINED; .)
                                              slx.emit(CommandWord.NOT);
                                              type = st.BOOLEAN;
                                           .)
-|                                         (. int t1, t2; .)
-  Term<out t1>                            (. checkInt(t1); .)
-{                                         (. CommandWord cw; .)
-  AddOp<out cw>
+|                                         (. int t1; .)
+  Term<out t1>                            (. type = t1; .)
+{                                         (. int t2; CommandWord cw; .)
+  AddOp<out cw>                           (. checkInt(t1); .)
   Term<out t2>                            (.
                                              checkInt(t2);
                                              slx.emit(cw);
@@ -184,14 +187,15 @@ SimExpr<out int type>                     (. type = st.UNDEFINED; .)
 
 /*---------------------------------------------------------------------------*/
 
-Term<out int type>                       (. int t1, t2; type = st.INTEGER; .)
-= Factor<out t1>                         (. checkInt(t1); .)
-{                                        (. CommandWord cw; .)
-  MulOp<out cw>
-  Factor<out t2>                         (.
-                                            checkInt(t2);
-                                            slx.emit(cw);
-                                         .)
+Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
+= Factor<out t1>                          (. type = t1; .)
+{                                         (. int t2; CommandWord cw; .)
+  MulOp<out cw>                           (. checkInt(t1); .)
+  Factor<out t2>                          (.
+                                             checkInt(t2);
+                                             slx.emit(cw);
+                                             type = st.INTEGER;
+                                          .)
 }
 .
 
