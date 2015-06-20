@@ -63,29 +63,22 @@ public class SymbolTable {
     // TODO: should the store location come from the parser?
     public Function addFunction(String name, int type) {
         Function new_function = new Function(name, type);
-        System.out.println("Adding new function: " + name + " " + new_function);
         this.top_scope.addSymbol(new_function);
-        this.printTable();
         return new_function;
     }
 
     public Variable addVariable(String name, int type) {
         Variable new_variable = new Variable(name, type);
-        System.out.println("Adding new variable: " + name + " " + new_variable);
         this.top_scope.addSymbol(new_variable);
-        this.printTable();
         return new_variable;
     }
 
     // search the name in all open scopes and return its object node
     public Symbol findSymbol(String name) {
-        System.out.println("Finding symbol: " + name);
-
         Scope scope = this.top_scope;
         Symbol symbol;
         while (scope != null) {
             symbol = scope.findSymbol(name);
-            System.out.println(symbol);
             if (symbol != null) {
                 return symbol;
             }
