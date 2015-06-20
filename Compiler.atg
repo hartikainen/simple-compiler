@@ -1,8 +1,5 @@
 import java.util.*;
 import fi.tkk.cs.tkkcc.slx.*;
-// import mycompiler.SymbolTable;
-// import Scanner;
-// import Printer;
 
 COMPILER Compiler
 

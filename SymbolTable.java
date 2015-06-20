@@ -1,7 +1,4 @@
-// package mycompiler;
-
 import java.util.*;
-// import Parser;
 
 public class SymbolTable {
     public static final int // types

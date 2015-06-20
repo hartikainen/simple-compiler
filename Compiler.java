@@ -2,11 +2,6 @@ import fi.tkk.cs.tkkcc.SlxCompiler;
 import fi.tkk.cs.tkkcc.slx.*;
 import java.io.*;
 
-// import mycompiler.SymbolTable;
-
-// import Parser;
-// import Scanner;
-
 public class Compiler implements SlxCompiler {
     private Scanner scanner;
     private Parser parser;
