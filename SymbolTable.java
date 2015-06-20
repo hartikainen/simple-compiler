@@ -5,10 +5,10 @@ import java.util.*;
 
 public class SymbolTable {
     public static final int // types
-        UNDEF=0, INTEGER=1, BOOLEAN=2;
+        UNDEFINED=0, INTEGER=1, BOOLEAN=2;
 
     public static final int // object kinds
-        VAR=0, PROC=1, SCOPE=2;
+        VARIABLE=0, PROCEDURE=1, SCOPE=2;
 
     // public static final Map<Integer, String> types_inverse;
     // static {
@@ -27,20 +27,23 @@ public class SymbolTable {
 
     public SymbolTable(Parser parser) {
         this.parser = parser;
-        this.top_scope = null;
+        this.top_scope = null; // new Scope();
         this.cur_level = -1;
-        undef_var = new Variable("undef", UNDEF);
+        undef_var = new Variable("undef", UNDEFINED);
         undef_var.adr = 0;
         undef_var.level = 0;
     }
 
     public void printTable() {
+        System.out.println("Table contents: ");
         Scope scope = this.top_scope;
         while (scope != null) {
-            System.out.println(scope.name);
+            System.out.println(scope);
             scope.printLocals();
             scope = scope.next;
         }
+        System.out.println();
+        System.out.println();
     }
 
     // open a new scope and make it the current scope (topScope)
@@ -60,6 +63,7 @@ public class SymbolTable {
     // TODO: should the store location come from the parser?
     public Function addFunction(String name, int type) {
         Function new_function = new Function(name, type);
+        System.out.println("Adding new function: " + name + " " + new_function);
         this.top_scope.addSymbol(new_function);
         this.printTable();
         return new_function;
@@ -67,6 +71,7 @@ public class SymbolTable {
 
     public Variable addVariable(String name, int type) {
         Variable new_variable = new Variable(name, type);
+        System.out.println("Adding new variable: " + name + " " + new_variable);
         this.top_scope.addSymbol(new_variable);
         this.printTable();
         return new_variable;
@@ -74,10 +79,13 @@ public class SymbolTable {
 
     // search the name in all open scopes and return its object node
     public Symbol findSymbol(String name) {
+        System.out.println("Finding symbol: " + name);
+
         Scope scope = this.top_scope;
         Symbol symbol;
         while (scope != null) {
             symbol = scope.findSymbol(name);
+            System.out.println(symbol);
             if (symbol != null) {
                 return symbol;
             }
@@ -108,8 +116,8 @@ public class SymbolTable {
                 Variable var = (Variable) symbol_entry.getValue();
                 for (int i=0; i<var.level; i++) {
                     System.out.print("  ");
-                    System.out.println(name + ": "+ Integer.toString(var.adr));
                 }
+                System.out.println(name + ": "+ Integer.toString(var.adr));
             }
         }
 
@@ -134,8 +142,10 @@ public class SymbolTable {
 
         public Symbol findSymbol(String name) {
             for (Map.Entry<String, Symbol> symbol_entry : this.locals.entrySet()) {
-                if (name == symbol_entry.getKey()) {
-                    return symbol_entry.getValue();
+                String symbol_name = symbol_entry.getKey();
+                Symbol symbol_value = symbol_entry.getValue();
+                if (name.equals(symbol_name)) {
+                    return symbol_value;
                 }
             }
             return null;

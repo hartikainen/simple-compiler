@@ -55,32 +55,42 @@ PRODUCTIONS
 
 /*---------------------------------------------------------------------------*/
 
-Compiler
-= MainFuncDecl
+Compiler                               (. System.out.println("Start"); .)
+= MainFuncDecl                         (. st.printTable(); .)
 .
 
 /*---------------------------------------------------------------------------*/
 
 MainFuncDecl
-= "main" FuncBody
+= "main"                               (. st.openScope(); .)
+  FuncBody                             (. st.closeScope(); .)
 .
 
 /*---------------------------------------------------------------------------*/
 
 FuncBody
-= "begin" VarDecl StatementList ReturnStatement "end"
+= "begin"
+  VarDecl
+  StatementList
+  ReturnStatement
+  "end"
 .
 
 /*---------------------------------------------------------------------------*/
 
-VarDecl
-= { Type identifier ";" }
+VarDecl                                 (. String name; int type; int var_count = 0; .)
+= {
+  Type<out type>
+  Ident<out name>                       (. st.addVariable(name, type); var_count++; .)
+  ';'
+  }
 .
 
 /*---------------------------------------------------------------------------*/
 
 ReturnStatement
-= "return" Expr ";"
+=                                        (. int type; .)
+  "return" Expr<out type> ";"
 .
 
 /*---------------------------------------------------------------------------*/
@@ -92,17 +102,27 @@ StatementList
 /*---------------------------------------------------------------------------*/
 
 Statement
-= "if" "(" Expr ")" "then" Statement
-| "do" Statement "while" "(" Expr ")" ";"
-| "print" "(" Expr ")" ";"
+=                                         (. int type; .)
+  "if" "(" Expr<out type> ")" "then" Statement
+|                                         (. int type; .)
+  "do" Statement "while" "(" Expr<out type> ")" ";"
+|                                         (. int type; .)
+  "print" "(" Expr<out type> ")" ";"
 | "begin" StatementList "end"
-| IdAccess "=" Expr ";"    // Meaning: assignment
+|                                         (. String name; int type; SymbolTable.Variable var; .)
+  Ident<out name>                         (. var = (SymbolTable.Variable) st.findSymbol(name); .)
+  "="
+  Expr<out type>
+  ";"    // Meaning: assignment
 .
 
 /*---------------------------------------------------------------------------*/
 
-Expr
-= RelExpr { "&&" RelExpr }
+  Expr<out int type>                        (. int t1, t2; type = 0; .)
+= RelExpr
+{ "&&"
+  RelExpr
+}
 .
 
 /*---------------------------------------------------------------------------*/
@@ -128,8 +148,10 @@ Term
 
 Factor
 =
-( "(" Expr ")"
-| IdAccess
+(                                                      (. int type; .)
+  "(" Expr<out type> ")"
+|                                                      (. String name; .)
+Ident<out name>
 | integer
 | "true"
 | "false"
@@ -159,15 +181,15 @@ RelOp
 
 /*---------------------------------------------------------------------------*/
 
-IdAccess
-= identifier
+Ident<out String name>
+= identifier                                        (. name = t.val; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-Type
-= "int"
-| "boolean"
+Type<out int type>                                  (. type = st.UNDEFINED; .)
+= "int"                                             (. type = st.INTEGER; .)
+| "boolean"                                         (. type = st.BOOLEAN; .)
 .
 
 END Compiler.
