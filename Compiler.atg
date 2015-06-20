@@ -11,6 +11,8 @@ public Parser(Scanner s, Printer p) {
 }
 
 public SymbolTable st;
+public SlxProgram slx;
+
 private Printer printer;
 
 CHARACTERS
