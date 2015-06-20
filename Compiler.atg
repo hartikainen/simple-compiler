@@ -1,4 +1,16 @@
+import fi.tkk.cs.tkkcc.slx.*;
+// import mycompiler.SymbolTable;
+// import Scanner;
+// import Printer;
+
 COMPILER Compiler
+
+private Printer printer;
+
+public Parser(Scanner s, Printer p) {
+    this(s);
+    this.printer = p;
+}
 
 CHARACTERS
   cr  = '\r'.
