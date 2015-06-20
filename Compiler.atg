@@ -1,3 +1,4 @@
+import java.util.*;
 import fi.tkk.cs.tkkcc.slx.*;
 // import mycompiler.SymbolTable;
 // import Scanner;
@@ -14,6 +15,14 @@ public SymbolTable st;
 public SlxProgram slx;
 
 private Printer printer;
+
+private void checkBoolean(int type) {
+  if (type != st.BOOLEAN) SemErr("boolean type expected");
+}
+
+private void checkInt(int type) {
+  if (type != st.INTEGER) SemErr("integer type expected");
+}
 
 CHARACTERS
   cr  = '\r'.
@@ -113,85 +122,130 @@ Statement
 | "begin" StatementList "end"
 |                                         (. String name; int type; SymbolTable.Variable var; .)
   Ident<out name>                         (. var = (SymbolTable.Variable) st.findSymbol(name); .)
-  "="
-  Expr<out type>
-  ";"    // Meaning: assignment
+  '='                                     (. slx.emit(CommandWord.ENT, var.adr); .)
+                                          // cannot assign to procedure
+  Expr<out type>                          (.
+                                            if (var.type == type) {
+                                              slx.emit(CommandWord.STL);
+                                            } else {
+                                              SemErr("incompatible types");
+                                            }
+                                          .)
+  ';'    // Meaning: assignment
 .
 
 /*---------------------------------------------------------------------------*/
 
-  Expr<out int type>                        (. int t1, t2; type = 0; .)
-= RelExpr
+Expr<out int type>                        (. int t1, t2; type = st.BOOLEAN; .)
+= RelExpr<out t1>                         (. checkBoolean(t1); .)
 { "&&"
-  RelExpr
+  RelExpr<out t2>                         (.
+                                             checkBoolean(t2);
+                                             slx.emit(CommandWord.REQ);
+                                             slx.emit(CommandWord.ENT, 1);
+                                             slx.emit(CommandWord.REQ);
+                                          .)
 }
 .
 
 /*---------------------------------------------------------------------------*/
 
-RelExpr
-= SimExpr { RelOp SimExpr }
+RelExpr<out int type>                     (. int t1, t2; type = st.BOOLEAN; .)
+= SimExpr<out t1>                         (. checkInt(t1); .)
+{                                         (. CommandWord cw; .)
+  RelOp<out cw>
+  SimExpr<out t2>                         (.
+                                             checkInt(t2);
+                                             slx.emit(cw);
+                                          .)
+}
 .
 
 /*---------------------------------------------------------------------------*/
 
-SimExpr
-= "!" SimExpr
-| Term { AddOp Term }
+SimExpr<out int type>                     (. type = st.UNDEFINED; .)
+= '!'                                     (. int t; .)
+  SimExpr<out t>                          (.
+                                             checkBoolean(t);
+                                             slx.emit(CommandWord.NOT);
+                                             type = st.BOOLEAN;
+                                          .)
+|                                         (. int t1, t2; .)
+  Term<out t1>                            (. checkInt(t1); .)
+{                                         (. CommandWord cw; .)
+  AddOp<out cw>
+  Term<out t2>                            (.
+                                             checkInt(t2);
+                                             slx.emit(cw);
+                                             type = st.INTEGER;
+                                          .)
+}
 .
 
 /*---------------------------------------------------------------------------*/
 
-Term
-= Factor { MulOp Factor }
+Term<out int type>                       (. int t1, t2; type = st.INTEGER; .)
+= Factor<out t1>                         (. checkInt(t1); .)
+{                                        (. CommandWord cw; .)
+  MulOp<out cw>
+  Factor<out t2>                         (.
+                                            checkInt(t2);
+                                            slx.emit(cw);
+                                         .)
+}
 .
 
 /*---------------------------------------------------------------------------*/
 
-Factor
+Factor<out int type>                     (. type = st.UNDEFINED; .)
 =
-(                                                      (. int type; .)
-  "(" Expr<out type> ")"
-|                                                      (. String name; .)
-Ident<out name>
-| integer
-| "true"
-| "false"
-| "read" "(" ")"
+(
+  '(' Expr<out type> ')'
+|                                        (. String name; .)
+  Ident<out name>
+|                                        (. int val; .)
+  integer                                (.
+                                            val = Integer.parseInt(t.val);
+                                            slx.emit(CommandWord.ENT, val);
+                                            type = st.INTEGER;
+                                         .)
+| "true"                                 (. slx.emit(CommandWord.ENT, 1); type = st.BOOLEAN; .)
+| "false"                                (. slx.emit(CommandWord.ENT, 2); type = st.BOOLEAN; .)
+| "read" '(' ')'                         (. slx.emit(CommandWord.REA); .)
 )
 .
 
 /*---------------------------------------------------------------------------*/
 
-AddOp
-= "+"
-| "-"
+AddOp<out CommandWord cw>                 (. cw = CommandWord.ADD; .)
+= '+'                                     (. cw = CommandWord.ADD; .)
+| '-'                                     (. cw = CommandWord.SUB; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-MulOp
-= "*"
-| "/"
+MulOp<out CommandWord cw>                 (. cw = CommandWord.MUL; .)
+= '*'                                     (. cw = CommandWord.MUL; .)
+| '/'                                     (. cw = CommandWord.DIV; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-RelOp
-= "<"
+RelOp<out CommandWord cw>
+= '<'                                     (. cw = CommandWord.RGT; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
 Ident<out String name>
-= identifier                                        (. name = t.val; .)
+= identifier                              (. name = t.val; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-Type<out int type>                                  (. type = st.UNDEFINED; .)
-= "int"                                             (. type = st.INTEGER; .)
-| "boolean"                                         (. type = st.BOOLEAN; .)
+Type<out int type>                        (. type = st.UNDEFINED; .)
+= "int"                                   (. type = st.INTEGER; .)
+| "boolean"                               (. type = st.BOOLEAN; .)
 .
 
 END Compiler.
