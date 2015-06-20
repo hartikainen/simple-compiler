@@ -6,9 +6,18 @@
 # directory to PATH run the following command (C shell)
 #   setenv PATH /u/courses/t106550/bin:$PATH
 
-GRAMMAR_FILE="../Compiler.atg"
-#COCOR="cocor"
-COCOR="java -jar ../Coco.jar"
 
+CPATH=$1
+rm -f ${CPATH}/Parser.java ${CPATH}/Parser.java.old ${CPATH}/Scanner.java ${CPATH}/Scanner.java.old
+#"/Users/Kristian/code/T-106.4200 Introduction to Compiling"
+COCO_BIN="${CPATH}/bin"
+COCO_JAR="${COCO_BIN}/Coco.jar"
+
+COCOR="java -jar ${COCO_JAR} -frames ${COCO_BIN}"
+GRAMMAR_FILE="${CPATH}/Compiler.atg"
+
+echo "${COCOR} ${GRAMMAR_FILE}"
 $COCOR $GRAMMAR_FILE
-javac ../*.java
+
+echo "javac ${CPATH}/*.java"
+javac ${CPATH}/*.java
