@@ -64,13 +64,13 @@ PRODUCTIONS
 /*---------------------------------------------------------------------------*/
 
 Compiler                               (. System.out.println("Start"); .)
-= MainFuncDecl
+= MainFuncDecl                         (. slx.emit(CommandWord.HLT); .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-MainFuncDecl
-= "main"                               (. st.openScope(); .)
+MainFuncDecl                           (. st.openScope(); .)
+= "main"                               (. slx.emit(CommandWord.LAB, 0); .)
   FuncBody                             (. st.closeScope(); .)
 .
 
@@ -99,8 +99,8 @@ VarDecl                                 (. String name; int type; int var_count 
 ReturnStatement                          (. int type; .)
 =
   "return"
-  Expr<out type>                         (. slx.emit(CommandWord.RET); .)
-  ";"
+  Expr<out type>
+  ";"                                    // (. slx.emit(CommandWord.RET); .)
 .
 
 /*---------------------------------------------------------------------------*/
@@ -153,11 +153,11 @@ Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
 
 RelExpr<out int type>                     (. int t1; type = st.UNDEFINED; .)
 = SimExpr<out t1>                         (. type = t1; .)
-{                                         (. int t2; CommandWord cw; .)
-  RelOp<out cw>                           (. checkInt(t1); .)
+{                                         (. int t2; CommandWord op; .)
+  RelOp<out op>                           (. checkInt(t1); .)
   SimExpr<out t2>                         (.
                                              checkInt(t2);
-                                             slx.emit(cw);
+                                             slx.emit(op);
                                              type = st.BOOLEAN;
                                           .)
 }
@@ -174,11 +174,11 @@ SimExpr<out int type>                     (. type = st.UNDEFINED; .)
                                           .)
 |                                         (. int t1; .)
   Term<out t1>                            (. type = t1; .)
-{                                         (. int t2; CommandWord cw; .)
-  AddOp<out cw>                           (. checkInt(t1); .)
+{                                         (. int t2; CommandWord op; .)
+  AddOp<out op>                           (. checkInt(t1); .)
   Term<out t2>                            (.
                                              checkInt(t2);
-                                             slx.emit(cw);
+                                             slx.emit(op);
                                              type = st.INTEGER;
                                           .)
 }
@@ -188,11 +188,11 @@ SimExpr<out int type>                     (. type = st.UNDEFINED; .)
 
 Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 = Factor<out t1>                          (. type = t1; .)
-{                                         (. int t2; CommandWord cw; .)
-  MulOp<out cw>                           (. checkInt(t1); .)
+{                                         (. int t2; CommandWord op; .)
+  MulOp<out op>                           (. checkInt(t1); .)
   Factor<out t2>                          (.
                                              checkInt(t2);
-                                             slx.emit(cw);
+                                             slx.emit(op);
                                              type = st.INTEGER;
                                           .)
 }
@@ -204,8 +204,14 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
 =
 (
   '(' Expr<out type> ')'
-|                                        (. String name; .)
-  Ident<out name>
+|                                        (. String name; SymbolTable.Variable var;.)
+  IdAccess<out name>                     (.
+                                            var = (SymbolTable.Variable)st.findSymbol(name);
+                                            type = var.type;
+                                            // slx.emit(CommandWord.ENT, var.adr);
+                                            // slx.emit(CommandWord.LDM);
+                                            //type = st.INTEGER;
+                                         .)
 |                                        (. int val; .)
   integer                                (.
                                             val = Integer.parseInt(t.val);
@@ -220,22 +226,33 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
 
 /*---------------------------------------------------------------------------*/
 
-AddOp<out CommandWord cw>                 (. cw = CommandWord.ADD; .)
-= '+'                                     (. cw = CommandWord.ADD; .)
-| '-'                                     (. cw = CommandWord.SUB; .)
+AddOp<out CommandWord op>                 (. op = CommandWord.ADD; .)
+= '+'                                     (. op = CommandWord.ADD; .)
+| '-'                                     (. op = CommandWord.SUB; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-MulOp<out CommandWord cw>                 (. cw = CommandWord.MUL; .)
-= '*'                                     (. cw = CommandWord.MUL; .)
-| '/'                                     (. cw = CommandWord.DIV; .)
+MulOp<out CommandWord op>                 (. op = CommandWord.MUL; .)
+= '*'                                     (. op = CommandWord.MUL; .)
+| '/'                                     (. op = CommandWord.DIV; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-RelOp<out CommandWord cw>
-= '<'                                     (. cw = CommandWord.RGT; .)
+RelOp<out CommandWord op>
+= '<'                                     (. op = CommandWord.RGT; .)
+.
+
+/*---------------------------------------------------------------------------*/
+
+IdAccess<out String name>                 (. SymbolTable.Variable var; .)
+  = Ident<out name>                       (.
+                                             var = (SymbolTable.Variable)st.findSymbol(name);
+                                             slx.emit(CommandWord.ENT, var.adr);
+                                             slx.emit(CommandWord.LDL);
+                                             //slx.emit(CommandWord.STL);
+                                          .)
 .
 
 /*---------------------------------------------------------------------------*/
