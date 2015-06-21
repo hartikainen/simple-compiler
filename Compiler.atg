@@ -128,11 +128,24 @@ Statement
                                              if_end   = ++label_counter;
                                              slx.emit(CommandWord.JZE, if_end);
                                           .)
-  "then" Statement                        (.  slx.emit(CommandWord.LAB, if_end); .)
+  "then" Statement                        (. slx.emit(CommandWord.LAB, if_end); .)
+|                                         (. int type, while_start; .)
+  "do"                                    (.
+                                             while_start = ++label_counter;
+                                             slx.emit(CommandWord.LAB, while_start);
+                                          .)
+  Statement
+  "while" '('
+  Expr<out type>                          (.
+                                             checkBoolean(type);
+                                             // we don't have jump if command word,
+                                             // so need to negate and use jump if not
+                                             slx.emit(CommandWord.NOT);
+                                             slx.emit(CommandWord.JZE, while_start);
+                                          .)
+  ')' ';'
 |                                         (. int type; .)
-  "do" Statement "while" "(" Expr<out type> ")" ";"
-|                                         (. int type; .)
-  "print" "(" Expr<out type> ")" ";"      (. slx.emit(CommandWord.WRI); .)
+  "print" '(' Expr<out type> ')' ';'      (. slx.emit(CommandWord.WRI); .)
 | "begin" StatementList "end"
 |                                         (. String name; int type; SymbolTable.Variable var; .)
   Ident<out name>                         (. var = (SymbolTable.Variable) st.findSymbol(name); .)
