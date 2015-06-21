@@ -22,6 +22,15 @@ private void checkInt(int type) {
   if (type != st.INTEGER) SemErr("integer type expected");
 }
 
+private int safeParseInt(String val) {
+  try {
+    return Integer.parseInt(val);
+  } catch (NumberFormatException e) {
+    SemErr("too large integer");
+    return Integer.MAX_VALUE;
+  }
+}
+
 CHARACTERS
   cr  = '\r'.
   lf  = '\n'.
@@ -220,7 +229,7 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
                                          .)
 |                                        (. int val; .)
   integer                                (.
-                                            val = Integer.parseInt(t.val);
+                                            val = safeParseInt(t.val);
                                             slx.emit(CommandWord.ENT, val);
                                             type = st.INTEGER;
                                          .)
