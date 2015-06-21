@@ -12,6 +12,7 @@ public SymbolTable st;
 public SlxProgram slx;
 
 private Printer printer;
+private int label_counter = 0;
 
 private void checkBoolean(int type) {
   if (type != st.BOOLEAN) SemErr("boolean type expected");
@@ -112,8 +113,13 @@ StatementList
 /*---------------------------------------------------------------------------*/
 
 Statement
-=                                         (. int type; .)
-  "if" "(" Expr<out type> ")" "then" Statement
+=                                         (. int type, if_end;  .)
+  "if" '(' Expr<out type> ')'             (.
+                                             checkBoolean(type);
+                                             if_end   = ++label_counter;
+                                             slx.emit(CommandWord.JZE, if_end);
+                                          .)
+  "then" Statement                        (.  slx.emit(CommandWord.LAB, if_end); .)
 |                                         (. int type; .)
   "do" Statement "while" "(" Expr<out type> ")" ";"
 |                                         (. int type; .)
