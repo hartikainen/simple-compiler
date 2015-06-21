@@ -14,12 +14,12 @@ public SlxProgram slx;
 private Printer printer;
 private int label_counter = 0;
 
-private void checkBoolean(int type) {
-  if (type != st.BOOLEAN) SemErr("boolean type expected");
+private void checkBoolean(int type, String operation) {
+  if (type != st.BOOLEAN) SemErr("type error: " + operation + " expects boolean type");
 }
 
-private void checkInt(int type) {
-  if (type != st.INTEGER) SemErr("integer type expected");
+private void checkInt(int type, String operation) {
+  if (type != st.INTEGER) SemErr("type error: " + operation + " expects integer type");
 }
 
 private int safeParseInt(String val) {
@@ -124,7 +124,7 @@ StatementList
 Statement
 =                                         (. int type, if_end;  .)
   "if" '(' Expr<out type> ')'             (.
-                                             checkBoolean(type);
+                                             checkBoolean(type, "if statement");
                                              if_end   = ++label_counter;
                                              slx.emit(CommandWord.JZE, if_end);
                                           .)
@@ -137,7 +137,7 @@ Statement
   Statement
   "while" '('
   Expr<out type>                          (.
-                                             checkBoolean(type);
+                                             checkBoolean(type, "while condition");
                                              // we don't have jump if command word,
                                              // so need to negate and use jump if not
                                              slx.emit(CommandWord.NOT);
@@ -170,9 +170,9 @@ Statement
 Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
 = RelExpr<out t1>                         (. type = t1; .)
 {                                         (. int t2; .)
-  "&&"                                    (. checkBoolean(t1); .)
+  "&&"                                    (. checkBoolean(t1, "&& operator"); .)
   RelExpr<out t2>                         (.
-                                             checkBoolean(t2);
+                                             checkBoolean(t2, "&& operator");
                                              slx.emit(CommandWord.REQ);
                                              slx.emit(CommandWord.ENT, 1);
                                              slx.emit(CommandWord.REQ);
@@ -186,9 +186,9 @@ Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
 RelExpr<out int type>                     (. int t1; type = st.UNDEFINED; .)
 = SimExpr<out t1>                         (. type = t1; .)
 {                                         (. int t2; CommandWord op; .)
-  RelOp<out op>                           (. checkInt(t1); .)
+  RelOp<out op>                           (. checkInt(t1, "Relation operator (<, >)"); .)
   SimExpr<out t2>                         (.
-                                             checkInt(t2);
+                                             checkInt(t2, "Relation operator (<, >)");
                                              slx.emit(op);
                                              type = st.BOOLEAN;
                                           .)
@@ -200,16 +200,16 @@ RelExpr<out int type>                     (. int t1; type = st.UNDEFINED; .)
 SimExpr<out int type>                     (. type = st.UNDEFINED; .)
 = '!'                                     (. int t; .)
   SimExpr<out t>                          (.
-                                             checkBoolean(t);
+                                           checkBoolean(t, "! operator");
                                              slx.emit(CommandWord.NOT);
                                              type = st.BOOLEAN;
                                           .)
 |                                         (. int t1; .)
   Term<out t1>                            (. type = t1; .)
 {                                         (. int t2; CommandWord op; .)
-  AddOp<out op>                           (. checkInt(t1); .)
+  AddOp<out op>                           (. checkInt(t1, "Add (subtract) operation"); .)
   Term<out t2>                            (.
-                                             checkInt(t2);
+                                             checkInt(t2, "Add (subtract) operation");
                                              slx.emit(op);
                                              type = st.INTEGER;
                                           .)
@@ -221,9 +221,9 @@ SimExpr<out int type>                     (. type = st.UNDEFINED; .)
 Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 = Factor<out t1>                          (. type = t1; .)
 {                                         (. int t2; CommandWord op; .)
-  MulOp<out op>                           (. checkInt(t1); .)
+  MulOp<out op>                           (. checkInt(t1, "Multiplication (division) operation"); .)
   Factor<out t2>                          (.
-                                             checkInt(t2);
+                                             checkInt(t2, "Multiplication (division)");
                                              slx.emit(op);
                                              type = st.INTEGER;
                                           .)
