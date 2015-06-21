@@ -114,7 +114,7 @@ public class SymbolTable {
         public void checkUniqueSymbolName(String name) {
             for (String local_name : this.locals.keySet()) {
                 if (local_name.equals(name)) {
-                    parser.SemErr("name declared twice");
+                    parser.SemErr("name '" + name + "' declared twice");
                 }
             }
         }
