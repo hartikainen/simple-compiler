@@ -79,15 +79,43 @@ PRODUCTIONS
 
 /*---------------------------------------------------------------------------*/
 
-Compiler                               (. System.out.println("Start"); .)
-= MainFuncDecl                         (. slx.emit(CommandWord.HLT); .)
+Compiler                               (. st.openScope(); .)
+= MainFuncDecl                         (.
+                                          slx.emit(CommandWord.HLT);
+                                          st.closeScope();
+                                       .)
 .
 
 /*---------------------------------------------------------------------------*/
 
 MainFuncDecl                           (. st.openScope(); .)
-= "main"                               (. slx.emit(CommandWord.LAB, 0); .)
+= "main"                               (. slx.emit(CommandWord.LAB, label_counter); .)
   FuncBody                             (. st.closeScope(); .)
+.
+
+/*---------------------------------------------------------------------------*/
+
+FuncDecl
+= FuncHeader
+  FuncBody
+  FuncDecl
+.
+
+/*---------------------------------------------------------------------------*/
+
+FuncHeader
+= Type<out type>
+  identifier
+  '(' ParamList ')'
+.
+
+/*---------------------------------------------------------------------------*/
+
+ParamList
+= Type<out type>
+  identifier
+{  ',' ParamList
+}
 .
 
 /*---------------------------------------------------------------------------*/
@@ -258,52 +286,69 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
                                          .)
 | "true"                                 (. slx.emit(CommandWord.ENT, 1); type = st.BOOLEAN; .)
 | "false"                                (. slx.emit(CommandWord.ENT, 2); type = st.BOOLEAN; .)
+| "new" "int" '[' Expr<out type> ']'
+| FunctionCall
+| identifier '.' "length"
 | "read" '(' ')'                         (. slx.emit(CommandWord.REA); .)
 )
 .
 
 /*---------------------------------------------------------------------------*/
 
-AddOp<out CommandWord op>                 (. op = CommandWord.ADD; .)
-= '+'                                     (. op = CommandWord.ADD; .)
-| '-'                                     (. op = CommandWord.SUB; .)
+AddOp<out CommandWord op>                (. op = CommandWord.ADD; .)
+= '+'                                    (. op = CommandWord.ADD; .)
+| '-'                                    (. op = CommandWord.SUB; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-MulOp<out CommandWord op>                 (. op = CommandWord.MUL; .)
-= '*'                                     (. op = CommandWord.MUL; .)
-| '/'                                     (. op = CommandWord.DIV; .)
+MulOp<out CommandWord op>                (. op = CommandWord.MUL; .)
+= '*'                                    (. op = CommandWord.MUL; .)
+| '/'                                    (. op = CommandWord.DIV; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
 RelOp<out CommandWord op>
-= '<'                                     (. op = CommandWord.RLT; .)
+= '<'                                    (. op = CommandWord.RLT; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-IdAccess<out String name>                 (. SymbolTable.Variable var; .)
-  = Ident<out name>                       (.
-                                             var = (SymbolTable.Variable)st.findSymbol(name);
-                                             slx.emit(CommandWord.ENT, var.adr);
-                                             slx.emit(CommandWord.LDL);
-                                             //slx.emit(CommandWord.STL);
-                                          .)
+IdAccess<out String name>                (. SymbolTable.Variable var; .)
+= Ident<out name>                        (.
+                                            var = (SymbolTable.Variable)st.findSymbol(name);
+                                            slx.emit(CommandWord.ENT, var.adr);
+                                            slx.emit(CommandWord.LDL);
+                                            //slx.emit(CommandWord.STL);
+                                         .)
+{ '[' Expr<out type> ']' }
 .
 
 /*---------------------------------------------------------------------------*/
 
 Ident<out String name>
-= identifier                              (. name = t.val; .)
+= identifier                             (. name = t.val; .)
 .
 
 /*---------------------------------------------------------------------------*/
 
-Type<out int type>                        (. type = st.UNDEFINED; .)
-= "int"                                   (. type = st.INTEGER; .)
-| "boolean"                               (. type = st.BOOLEAN; .)
+FunctionCall
+= identifier '(' CallParams ')'
+.
+
+/*---------------------------------------------------------------------------*/
+
+CallParams                               (. int type; .)
+= Expr<out type>
+{ ',' Expr<out type> }
+.
+
+/*---------------------------------------------------------------------------*/
+
+Type<out int type>                       (. type = st.UNDEFINED; .)
+= "int"                                  (. type = st.INTEGER; .)
+| "boolean"                              (. type = st.BOOLEAN; .)
 .
 
 END Compiler.
