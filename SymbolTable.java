@@ -82,7 +82,7 @@ public class SymbolTable {
             scope = scope.next;
         }
 
-        parser.SemErr(name +" is undeclared");
+        parser.SemErr("'" + name + "' is undeclared");
         return undef_var;
     }
 
