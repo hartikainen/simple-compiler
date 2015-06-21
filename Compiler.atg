@@ -15,11 +15,17 @@ private Printer printer;
 private int label_counter = 0;
 
 private void checkBoolean(int type, String operation) {
-  if (type != st.BOOLEAN) SemErr("type error: " + operation + " expects boolean type");
+  if (type != st.BOOLEAN) SemErr("type error: " +
+                                 operation +
+                                 " expects boolean type, got " +
+                                 SymbolTable.TYPES_INVERSE.get(type));
 }
 
 private void checkInt(int type, String operation) {
-  if (type != st.INTEGER) SemErr("type error: " + operation + " expects integer type");
+  if (type != st.INTEGER) SemErr("type error: " +
+                                 operation +
+                                 " expects integer type, got " +
+                                 SymbolTable.TYPES_INVERSE.get(type));
 }
 
 private int safeParseInt(String val) {
