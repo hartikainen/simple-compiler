@@ -20,7 +20,7 @@ public class Compiler implements SlxCompiler {
             output = program.toString();
             try {
                 System.out.println("trying");
-                PrintWriter writer = new PrintWriter("slx/" + filename + ".slx", "UTF-8");
+                PrintWriter writer = new PrintWriter("slx/" + input_file_path + ".slx", "UTF-8");
                 writer.print(output);
                 writer.close();
             } catch (IOException ex) {
