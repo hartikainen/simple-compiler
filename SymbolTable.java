@@ -7,14 +7,14 @@ public class SymbolTable {
     public static final int // object kinds
         VARIABLE=0, PROCEDURE=1, SCOPE=2;
 
-    // public static final Map<Integer, String> types_inverse;
-    // static {
-    //     Map<Integer, String> m = new HashMap<Integer, String>();
-    //     m.put(0, "undefined");
-    //     m.put(1, "int");
-    //     m.put(2, "boolean");
-    //     types_inverse = Collections.unmodifiableMap(m);
-    // }
+    public static final Map<Integer, String> TYPES_INVERSE;
+    static {
+        Map<Integer, String> m = new HashMap<Integer, String>();
+        m.put(0, "undefined");
+        m.put(1, "int");
+        m.put(2, "boolean");
+        TYPES_INVERSE = Collections.unmodifiableMap(m);
+    }
 
     int cur_level;	// nesting level of current scope
     Variable undef_var;	// object node for erroneous symbols

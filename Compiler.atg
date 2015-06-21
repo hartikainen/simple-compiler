@@ -155,7 +155,11 @@ Statement
                                             if (var.type == type) {
                                               slx.emit(CommandWord.STL);
                                             } else {
-                                              SemErr("incompatible types");
+                                              SemErr("incompatible types: trying to assign " +
+                                                     SymbolTable.TYPES_INVERSE.get(type) +
+                                                     " value to " +
+                                                     SymbolTable.TYPES_INVERSE.get(var.type)
+                                                     + " variable");
                                             }
                                           .)
   ';'    // Meaning: assignment
