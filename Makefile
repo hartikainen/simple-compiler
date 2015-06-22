@@ -20,7 +20,7 @@ easy-test:
 	@echo "**************************************************"
 	make coco-clean;
 	make;
-	@$(foreach TEST_FILE, $(EASY_TESTS), test-file TEST_FILE=$(TEST_FILE);)
+	@$(foreach TEST_FILE, $(EASY_TESTS), make test-file TEST_FILE=$(TEST_FILE);)
 
 test-file:
 	@echo "Testing file: " $(TEST_FILE)
