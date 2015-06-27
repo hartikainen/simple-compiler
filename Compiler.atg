@@ -3,16 +3,18 @@ import fi.tkk.cs.tkkcc.slx.*;
 
 COMPILER Compiler
 
-public Parser(Scanner s, Printer p) {
-    this(s);
-    this.printer = p;
-}
-
 public SymbolTable st;
+// public CodeGenerator gen;
 public SlxProgram slx;
 
 private Printer printer;
 private int label_counter = 0;
+
+
+/*----------------------------------------------------------------------------*
+ * Helper functions:                                                          *
+ * Raises an error in case of incompatible types                              *
+ *----------------------------------------------------------------------------*/
 
 private void checkBoolean(int type, String operation) {
   if (type != st.BOOLEAN) SemErr("type error: " +
@@ -35,6 +37,55 @@ private int safeParseInt(String val) {
     SemErr("too large integer");
     return Integer.MAX_VALUE;
   }
+}
+
+/*----------------------------------------------------------------------------*
+ * Functions to resolve LL(1) conflicts:                                      *
+ * Used as IF ( ... ) in expressions.                                         *
+ *--------------------------------------------------------------------------- */
+
+private boolean isFunctionCall() {
+  scanner.ResetPeek();
+
+  return (la.kind == _identifier && scanner.Peek().kind == _lpar);
+}
+
+/*----------------------------------------------------------------------------*
+ * Functions to keep the code cleaner                                         *
+ *----------------------------------------------------------------------------*/
+private SymbolTable.Function newFunction(String name, int type) {
+  SymbolTable.Function fn = st.addFunction(name, type, label_counter++);
+  slx.emit(CommandWord.LAB, fn.label);
+  st.openScope(fn.type);
+  // Address of the scope?
+  return fn;
+}
+
+private void functionReturn() {
+  if (st.top_scope.index == 0) return;
+  slx.emit(CommandWord.RET);
+}
+
+private void checkReturnType(SymbolTable.Function fn, int type) {
+  if (fn.type == type) return;
+
+  SemErr("type error: return type of function " +
+         fn.name +
+         " is " +
+         fn.type +
+         ", got " +
+         type +
+         " instead");
+}
+
+private void checkAssignmentType(SymbolTable.Variable var, int type) {
+  if (var.type == type) return;
+
+  SemErr("incompatible types: trying to assign " +
+         SymbolTable.TYPES_INVERSE.get(type) +
+         " value to " +
+         SymbolTable.TYPES_INVERSE.get(var.type)
+         + " variable");
 }
 
 CHARACTERS
@@ -77,95 +128,97 @@ IGNORE cr + lf + tab
 
 PRODUCTIONS
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-Compiler                               (. st.openScope(); .)
-= MainFuncDecl                         (.
+Compiler                               (. st.openScope(st.UNDEFINED); .)
+= FuncDecl
+  MainFuncDecl                         (.
                                           slx.emit(CommandWord.HLT);
                                           st.closeScope();
                                        .)
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-MainFuncDecl                           (. st.openScope(); .)
-= "main"                               (. slx.emit(CommandWord.LAB, label_counter); .)
-  FuncBody                             (. st.closeScope(); .)
+MainFuncDecl                           (. st.openScope(st.UNDEFINED); int return_type; .)
+= "main"                               (. slx.emit(CommandWord.LAB, label_counter++); .)
+  FuncBody<out return_type>
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-FuncDecl
-= FuncHeader
-  FuncBody
-  FuncDecl
-.
-
-/*---------------------------------------------------------------------------*/
-
-FuncHeader
-= Type<out type>
-  identifier
-  '(' ParamList ')'
-.
-
-/*---------------------------------------------------------------------------*/
-
-ParamList
-= Type<out type>
-  identifier
-{  ',' ParamList
+FuncDecl//                                (. slx.emit(CommandWord.JMP, 0) .)
+=
+{                                       (. int return_type; SymbolTable.Function fn; .)
+  FuncHeader<out fn>
+  FuncBody<out return_type>             (. checkReturnType(fn, return_type); .)
 }
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-FuncBody
+FuncHeader<out SymbolTable.Function fn> (. int type; .)
+= Type<out type> identifier             (. fn = newFunction(t.val, type); .)
+  '(' ParamList ')'                      // newFunction opens new scope
+.
+
+/*----------------------------------------------------------------------------*/
+
+ParamList                               (. String name; int type; .)
+=
+[ Type<out type> Ident<out name>        (. st.addVariable(t.val, type); .)
+{ ',' Type<out type> Ident<out name>    (. st.addVariable(t.val, type); .)
+}
+]
+.
+
+/*----------------------------------------------------------------------------*/
+
+FuncBody<out int return_type>
 = "begin"
   VarDecl
   StatementList
-  ReturnStatement
-  "end"
+  ReturnStatement<out return_type>
+  "end"                                 (. st.closeScope(); .)
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-VarDecl                                 (. String name; int type; int var_count = 0; .)
-= {
-  Type<out type>
-  Ident<out name>                       (. st.addVariable(name, type); var_count++; .)
-  ';'
-  }
-.
-
-/*---------------------------------------------------------------------------*/
-
-ReturnStatement                          (. int type; .)
+VarDecl                                 (. String name; int type; .)
 =
-  "return"
-  Expr<out type>
-  ";"                                    // (. slx.emit(CommandWord.RET); .)
+{ Type<out type>
+  Ident<out name>                       (. st.addVariable(name, type); .)
+  ';'
+}                                       // TODO: check the frame size?
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+ReturnStatement<out int type>
+= "return"
+  Expr<out type>
+  ";"                                    (. functionReturn(); .)
+.
+
+/*----------------------------------------------------------------------------*/
 
 StatementList
 = { Statement }
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 Statement
-=                                         (. int type, if_end;  .)
+=                                         (. int type, if_end; .)
   "if" '(' Expr<out type> ')'             (.
                                              checkBoolean(type, "if statement");
-                                             if_end   = ++label_counter;
+                                             if_end   = label_counter++;
                                              slx.emit(CommandWord.JZE, if_end);
                                           .)
   "then" Statement                        (. slx.emit(CommandWord.LAB, if_end); .)
 |                                         (. int type, while_start; .)
   "do"                                    (.
-                                             while_start = ++label_counter;
+                                             while_start = label_counter++;
                                              slx.emit(CommandWord.LAB, while_start);
                                           .)
   Statement
@@ -182,24 +235,18 @@ Statement
   "print" '(' Expr<out type> ')' ';'      (. slx.emit(CommandWord.WRI); .)
 | "begin" StatementList "end"
 |                                         (. String name; int type; SymbolTable.Variable var; .)
-  Ident<out name>                         (. var = (SymbolTable.Variable) st.findSymbol(name); .)
+  IdAccess<out name>                      (. var = (SymbolTable.Variable) st.findSymbol(name); .)
   '='                                     (. slx.emit(CommandWord.ENT, var.adr); .)
                                           // cannot assign to procedure
   Expr<out type>                          (.
-                                            if (var.type == type) {
-                                              slx.emit(CommandWord.STL);
-                                            } else {
-                                              SemErr("incompatible types: trying to assign " +
-                                                     SymbolTable.TYPES_INVERSE.get(type) +
-                                                     " value to " +
-                                                     SymbolTable.TYPES_INVERSE.get(var.type)
-                                                     + " variable");
-                                            }
+                                             checkAssignmentType(var, type);
+
+                                             slx.emit(CommandWord.STL);
                                           .)
   ';'    // Meaning: assignment
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
 = RelExpr<out t1>                         (. type = t1; .)
@@ -215,7 +262,7 @@ Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
 }
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 RelExpr<out int type>                     (. int t1; type = st.UNDEFINED; .)
 = SimExpr<out t1>                         (. type = t1; .)
@@ -229,7 +276,7 @@ RelExpr<out int type>                     (. int t1; type = st.UNDEFINED; .)
 }
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 SimExpr<out int type>                     (. type = st.UNDEFINED; .)
 = '!'                                     (. int t; .)
@@ -250,7 +297,7 @@ SimExpr<out int type>                     (. type = st.UNDEFINED; .)
 }
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 = Factor<out t1>                          (. type = t1; .)
@@ -264,11 +311,12 @@ Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 }
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 Factor<out int type>                     (. type = st.UNDEFINED; .)
 =
-(
+( IF (isFunctionCall()) FunctionCall     (..)
+| IF (true) identifier '.' "length"      (..)
   '(' Expr<out type> ')'
 |                                        (. String name; SymbolTable.Variable var;.)
   IdAccess<out name>                     (.
@@ -286,68 +334,74 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
                                          .)
 | "true"                                 (. slx.emit(CommandWord.ENT, 1); type = st.BOOLEAN; .)
 | "false"                                (. slx.emit(CommandWord.ENT, 2); type = st.BOOLEAN; .)
-| "new" "int" '[' Expr<out type> ']'
-| FunctionCall
-| identifier '.' "length"
+| "new" "int" '[' Expr<out type> ']'     (.
+                                            checkInt(type, "array allocation size");
+                                            type = st.INTEGER_ARRAY;
+                                            slx.emit(CommandWord.ALC);
+                                            slx.emit(CommandWord.STL);
+
+                                         .)
 | "read" '(' ')'                         (. slx.emit(CommandWord.REA); .)
 )
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 AddOp<out CommandWord op>                (. op = CommandWord.ADD; .)
 = '+'                                    (. op = CommandWord.ADD; .)
 | '-'                                    (. op = CommandWord.SUB; .)
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 MulOp<out CommandWord op>                (. op = CommandWord.MUL; .)
 = '*'                                    (. op = CommandWord.MUL; .)
 | '/'                                    (. op = CommandWord.DIV; .)
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 RelOp<out CommandWord op>
 = '<'                                    (. op = CommandWord.RLT; .)
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 IdAccess<out String name>                (. SymbolTable.Variable var; .)
 = Ident<out name>                        (.
                                             var = (SymbolTable.Variable)st.findSymbol(name);
                                             slx.emit(CommandWord.ENT, var.adr);
                                             slx.emit(CommandWord.LDL);
-                                            //slx.emit(CommandWord.STL);
                                          .)
-{ '[' Expr<out type> ']' }
+[                                        (. int type; .)
+  '[' Expr<out type> ']'
+]
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 Ident<out String name>
 = identifier                             (. name = t.val; .)
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 FunctionCall
 = identifier '(' CallParams ')'
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 CallParams                               (. int type; .)
 = Expr<out type>
 { ',' Expr<out type> }
 .
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 Type<out int type>                       (. type = st.UNDEFINED; .)
 = "int"                                  (. type = st.INTEGER; .)
+| "int[]"                                (. type = st.INTEGER_ARRAY; .)
 | "boolean"                              (. type = st.BOOLEAN; .)
 .
 

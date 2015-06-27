@@ -19,13 +19,15 @@ public class SymbolTable {
 
     int cur_level;	// nesting level of current scope
     Variable undef_var;	// object node for erroneous symbols
-    Scope top_scope;	// topmost procedure scope
+    public Scope top_scope;	// topmost procedure scope
+    int scope_counter;
 
     private Parser parser;
 
     public SymbolTable(Parser parser) {
         this.parser = parser;
         this.top_scope = null; // new Scope();
+        this.scope_counter = 0;
         this.cur_level = -1;
         undef_var = new Variable("undef", UNDEFINED);
         undef_var.adr = 0;
@@ -45,8 +47,8 @@ public class SymbolTable {
     }
 
     // open a new scope and make it the current scope (topScope)
-    public void openScope() {
-        Scope new_scope = new Scope();
+    public void openScope(int type) {
+        Scope new_scope = new Scope(type);
         new_scope.next = top_scope;
         this.top_scope = new_scope;
         this.cur_level++;
@@ -59,8 +61,8 @@ public class SymbolTable {
     }
 
     // TODO: should the store location come from the parser?
-    public Function addFunction(String name, int type) {
-        Function new_function = new Function(name, type);
+    public Function addFunction(String name, int type, int label) {
+        Function new_function = new Function(name, type, label);
         this.top_scope.addSymbol(new_function);
         return new_function;
     }
@@ -87,17 +89,18 @@ public class SymbolTable {
         return undef_var;
     }
 
-    private class Scope {
+    public class Scope {
         public Scope next;
         public int return_type;
+        public int index;
 
-        private String name;
         private int next_adr;                // next free address in this scope
         private HashMap<String, Symbol> locals =
             new HashMap<String, Symbol>();   // to locally declared objects
 
-        public Scope() {
-            // this.return_type = type;
+        public Scope(int type) {
+            this.return_type = type;
+            this.index = scope_counter++;
             // this.next_adr = 0;
         }
 
@@ -153,12 +156,13 @@ public class SymbolTable {
         }
     }
 
-    private class Function extends Symbol {
+    public class Function extends Symbol {
         public int label;
         public ArrayList<Integer> arg_types = new ArrayList<Integer>();
 
-        public Function(String name, int type) {
+        public Function(String name, int type, int label) {
             super(name, type);
+            this.label = label;
         }
     }
 

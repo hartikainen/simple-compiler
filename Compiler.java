@@ -59,7 +59,7 @@ public class Compiler implements SlxCompiler {
     @Override
     public SlxProgram compile(String sourceFilename) {
         this.scanner = new Scanner(sourceFilename);
-        this.parser = new Parser(this.scanner,  new Printer(false));
+        this.parser = new Parser(this.scanner);
         this.parser.st = new SymbolTable(this.parser);
         this.parser.slx = new SlxProgram();
         this.parser.Parse();
