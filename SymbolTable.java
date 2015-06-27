@@ -2,7 +2,7 @@ import java.util.*;
 
 public class SymbolTable {
     public static final int // types
-        UNDEFINED=0, INTEGER=1, BOOLEAN=2;
+        UNDEFINED=0, INTEGER=1, BOOLEAN=2, INTEGER_ARRAY=3;
 
     public static final int // object kinds
         VARIABLE=0, PROCEDURE=1, SCOPE=2;
@@ -13,6 +13,7 @@ public class SymbolTable {
         m.put(0, "undefined");
         m.put(1, "int");
         m.put(2, "boolean");
+        m.put(3, "int[]");
         TYPES_INVERSE = Collections.unmodifiableMap(m);
     }
 
@@ -144,7 +145,7 @@ public class SymbolTable {
 
     private class Symbol {
         String name;
-        int type;
+        int type; // For functions this is the return type
 
         public Symbol(String name, int type) {
             this.name = name;
@@ -159,7 +160,6 @@ public class SymbolTable {
         public Function(String name, int type) {
             super(name, type);
         }
-
     }
 
     public class Variable extends Symbol {
