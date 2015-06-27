@@ -91,17 +91,15 @@ public class SymbolTable {
 
     public class Scope {
         public Scope next;
-        public int return_type;
-        public int index;
+        public int return_type, index, frame_size;
 
-        private int next_adr;                // next free address in this scope
         private HashMap<String, Symbol> locals =
             new HashMap<String, Symbol>();   // to locally declared objects
 
         public Scope(int type) {
             this.return_type = type;
             this.index = scope_counter++;
-            // this.next_adr = 0;
+            this.frame_size = 0;
         }
 
         public void printLocals() {
@@ -131,7 +129,7 @@ public class SymbolTable {
         public void addSymbol(Variable var) {
             this.checkUniqueSymbolName(var.name);
             this.locals.put(var.name, var);
-            var.adr = this.next_adr++;
+            var.adr = ++this.frame_size;
         }
 
         public Symbol findSymbol(String name) {

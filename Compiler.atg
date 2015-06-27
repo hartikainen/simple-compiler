@@ -30,13 +30,54 @@ private void checkInt(int type, String operation) {
                                  SymbolTable.TYPES_INVERSE.get(type));
 }
 
-private int safeParseInt(String val) {
-  try {
-    return Integer.parseInt(val);
-  } catch (NumberFormatException e) {
-    SemErr("too large integer");
-    return Integer.MAX_VALUE;
+private void checkCallParameterTypes(SymbolTable.Function fn, ArrayList<Integer> parameters) {
+  ArrayList<Integer> expected_types = fn.arg_types;;
+  int expected_count = expected_types.size();
+  int parameter_count = parameters.size();
+
+  if (expected_count != parameter_count) {
+    SemErr("argument count error: function " +
+           fn.name +
+           " expects " +
+           expected_count +
+           " arguments, got " +
+           parameter_count);
   }
+
+  for (int i=0; i<expected_count; i++) {
+    if (expected_types.get(i) != parameters.get(i)) {
+      SemErr("type error: function " +
+               fn.name +
+               " parameter at position " +
+               i +
+               " should be " +
+               SymbolTable.TYPES_INVERSE.get(expected_types.get(i)) +
+               " got " +
+               SymbolTable.TYPES_INVERSE.get(parameters.get(i)));
+    }
+  }
+}
+
+private void checkReturnType(SymbolTable.Function fn, int type) {
+  if (fn.type == type) return;
+
+  SemErr("type error: return type of function " +
+         fn.name +
+         " is " +
+         SymbolTable.TYPES_INVERSE.get(fn.type) +
+         ", got " +
+         SymbolTable.TYPES_INVERSE.get(type) +
+         " instead");
+}
+
+private void checkAssignmentType(SymbolTable.Variable var, int type) {
+  if (var.type == type) return;
+
+  SemErr("incompatible types: trying to assign " +
+         SymbolTable.TYPES_INVERSE.get(type) +
+         " value to " +
+         SymbolTable.TYPES_INVERSE.get(var.type)
+         + " variable");
 }
 
 /*----------------------------------------------------------------------------*
@@ -66,26 +107,13 @@ private void functionReturn() {
   slx.emit(CommandWord.RET);
 }
 
-private void checkReturnType(SymbolTable.Function fn, int type) {
-  if (fn.type == type) return;
-
-  SemErr("type error: return type of function " +
-         fn.name +
-         " is " +
-         fn.type +
-         ", got " +
-         type +
-         " instead");
-}
-
-private void checkAssignmentType(SymbolTable.Variable var, int type) {
-  if (var.type == type) return;
-
-  SemErr("incompatible types: trying to assign " +
-         SymbolTable.TYPES_INVERSE.get(type) +
-         " value to " +
-         SymbolTable.TYPES_INVERSE.get(var.type)
-         + " variable");
+private int safeParseInt(String val) {
+  try {
+    return Integer.parseInt(val);
+  } catch (NumberFormatException e) {
+    SemErr("too large integer");
+    return Integer.MAX_VALUE;
+  }
 }
 
 CHARACTERS
@@ -315,7 +343,7 @@ Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 
 Factor<out int type>                     (. type = st.UNDEFINED; .)
 =
-( IF (isFunctionCall()) FunctionCall     (..)
+( IF (isFunctionCall()) FunctionCall<out type>
 | IF (true) identifier '.' "length"      (..)
   '(' Expr<out type> ')'
 |                                        (. String name; SymbolTable.Variable var;.)
@@ -381,28 +409,44 @@ IdAccess<out String name>                (. SymbolTable.Variable var; .)
 /*----------------------------------------------------------------------------*/
 
 Ident<out String name>
-= identifier                             (. name = t.val; .)
+= identifier                            (. name = t.val; .)
 .
 
 /*----------------------------------------------------------------------------*/
 
-FunctionCall
-= identifier '(' CallParams ')'
+FunctionCall<out int type>              (.
+                                           String name;
+                                           ArrayList<Integer> parameters;
+                                           SymbolTable.Function fn;
+                                        .)
+= Ident<out name>                       (.
+                                           slx.emit(CommandWord.SFR, st.top_scope.frame_size);
+                                           fn = (SymbolTable.Function)st.findSymbol(name);
+                                           type = fn.type;
+                                        .)
+  '(' CallParams<out parameters> ')'    (.
+                                           checkCallParameterTypes(fn, parameters);
+                                           slx.emit(CommandWord.SBR, fn.label, parameters.size());
+                                        .)
 .
 
 /*----------------------------------------------------------------------------*/
 
-CallParams                               (. int type; .)
-= Expr<out type>
-{ ',' Expr<out type> }
+CallParams<out ArrayList<Integer>
+           parameters>                  (.
+                                           int type;
+                                           parameters = new ArrayList<Integer>();
+                                        .)
+= Expr<out type>                        (. parameters.add(type); .)
+{ ',' Expr<out type> }                  (. parameters.add(type); .)
 .
 
 /*----------------------------------------------------------------------------*/
 
-Type<out int type>                       (. type = st.UNDEFINED; .)
-= "int"                                  (. type = st.INTEGER; .)
-| "int[]"                                (. type = st.INTEGER_ARRAY; .)
-| "boolean"                              (. type = st.BOOLEAN; .)
+Type<out int type>                      (. type = st.UNDEFINED; .)
+= "int"                                 (. type = st.INTEGER; .)
+| "int[]"                               (. type = st.INTEGER_ARRAY; .)
+| "boolean"                             (. type = st.BOOLEAN; .)
 .
 
 END Compiler.
