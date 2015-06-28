@@ -28,7 +28,7 @@ public class SymbolTable {
         this.parser = parser;
         this.top_scope = null; // new Scope();
         this.scope_counter = 0;
-        this.cur_level = -1;
+        this.cur_level = 0;
         undef_var = new Variable("undef", UNDEFINED);
         undef_var.adr = 0;
         undef_var.level = 0;
@@ -48,10 +48,9 @@ public class SymbolTable {
 
     // open a new scope and make it the current scope (topScope)
     public void openScope(int type) {
-        Scope new_scope = new Scope(type);
+        Scope new_scope = new Scope(type, this.cur_level++);
         new_scope.next = top_scope;
         this.top_scope = new_scope;
-        this.cur_level++;
     }
 
     // close the current scope
@@ -91,14 +90,14 @@ public class SymbolTable {
 
     public class Scope {
         public Scope next;
-        public int return_type, index, frame_size;
+        public int return_type, frame_size, level;
 
         private HashMap<String, Symbol> locals =
             new HashMap<String, Symbol>();   // to locally declared objects
 
-        public Scope(int type) {
+        public Scope(int type, int level) {
             this.return_type = type;
-            this.index = scope_counter++;
+            this.level = level;
             this.frame_size = 0;
         }
 

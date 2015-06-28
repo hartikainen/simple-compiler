@@ -119,8 +119,8 @@ private SymbolTable.Function newFunction(String name, int type) {
 }
 
 private void functionReturn() {
-  if (st.top_scope.index == 1) slx.emit(CommandWord.RET);
-  return;
+  if (st.top_scope.level == 1 && st.top_scope.return_type == st.UNDEFINED) return;
+  slx.emit(CommandWord.RET);
 }
 
 private int safeParseInt(String val) {
@@ -195,7 +195,10 @@ Compiler                               (. st.openScope(st.UNDEFINED); .)
 
 /*----------------------------------------------------------------------------*/
 
-MainFuncDecl                           (. st.openScope(st.UNDEFINED); int return_type; .)
+MainFuncDecl                           (.
+                                          int return_type;
+                                          st.openScope(st.UNDEFINED);
+                                       .)
 = "main"                               (. slx.emit(CommandWord.LAB, MAIN_LABEL); .)
   FuncBody<out return_type>
 .
