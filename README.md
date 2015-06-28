@@ -89,3 +89,10 @@ For Example
 ```
 java -jar ./SlxInterpreter.jar ./out.slx
 ```
+
+Also, there's a Makefile in the root folder. However it might need some modifications to work correctly. Usage:
+```
+make clean
+make
+make test-file TEST_FILE=<path-to-test-file>
+```
