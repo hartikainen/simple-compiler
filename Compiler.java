@@ -61,8 +61,8 @@ public class Compiler implements SlxCompiler {
         this.scanner = new Scanner(sourceFilename);
         this.parser = new Parser(this.scanner);
         this.parser.st = new SymbolTable(this.parser);
-        this.parser.slx = new SlxProgram();
+        this.parser.gen = new CodeGenerator();
         this.parser.Parse();
-        return parser.slx;
+        return parser.gen.getProgram();
     }
 }

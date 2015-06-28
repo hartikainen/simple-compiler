@@ -1,16 +1,25 @@
 import java.util.*;
-import fi.tkk.cs.tkkcc.slx.*;
 
 COMPILER Compiler
 
 public SymbolTable st;
-// public CodeGenerator gen;
-public SlxProgram slx;
+public CodeGenerator gen;
 
 private Printer printer;
-private int label_counter = 0;
 private int MAIN_LABEL = -1;
 
+private static final int // types
+        UNDEFINED=0, INTEGER=1, BOOLEAN=2, INTEGER_ARRAY=3;
+
+public static final Map<Integer, String> TYPES_INVERSE;
+static {
+  Map<Integer, String> m = new HashMap<Integer, String>();
+  m.put(0, "undefined");
+  m.put(1, "int");
+  m.put(2, "boolean");
+  m.put(3, "int[]");
+  TYPES_INVERSE = Collections.unmodifiableMap(m);
+}
 
 /*----------------------------------------------------------------------------*
  * Helper functions:                                                          *
@@ -18,24 +27,24 @@ private int MAIN_LABEL = -1;
  *----------------------------------------------------------------------------*/
 
 private void checkBoolean(int type, String operation) {
-  if (type != st.BOOLEAN) SemErr("type error: " +
+  if (type != BOOLEAN) SemErr("type error: " +
                                  operation +
                                  " expects boolean type, got " +
-                                 SymbolTable.TYPES_INVERSE.get(type));
+                                 TYPES_INVERSE.get(type));
 }
 
 private void checkInt(int type, String operation) {
-  if (type != st.INTEGER) SemErr("type error: " +
+  if (type != INTEGER) SemErr("type error: " +
                                  operation +
                                  " expects integer type, got " +
-                                 SymbolTable.TYPES_INVERSE.get(type));
+                                 TYPES_INVERSE.get(type));
 }
 
 private void checkArrayType(int type, String operation) {
-  if (type != st.INTEGER_ARRAY) SemErr("type error: " +
+  if (type != INTEGER_ARRAY) SemErr("type error: " +
                                        operation +
                                        "expects integer array type, got " +
-                                       SymbolTable.TYPES_INVERSE.get(type));
+                                       TYPES_INVERSE.get(type));
 }
 
 private void checkCallParameterTypes(SymbolTable.Function fn, ArrayList<Integer> parameters) {
@@ -63,9 +72,9 @@ private void checkCallParameterTypes(SymbolTable.Function fn, ArrayList<Integer>
                " parameter at position " +
                i +
                " should be " +
-               SymbolTable.TYPES_INVERSE.get(expected_types.get(i)) +
+               TYPES_INVERSE.get(expected_types.get(i)) +
                " got " +
-               SymbolTable.TYPES_INVERSE.get(parameters.get(i)));
+               TYPES_INVERSE.get(parameters.get(i)));
     }
   }
 }
@@ -76,9 +85,9 @@ private void checkReturnType(SymbolTable.Function fn, int type) {
   SemErr("type error: return type of function " +
          fn.name +
          " is " +
-         SymbolTable.TYPES_INVERSE.get(fn.type) +
+         TYPES_INVERSE.get(fn.type) +
          ", got " +
-         SymbolTable.TYPES_INVERSE.get(type) +
+         TYPES_INVERSE.get(type) +
          " instead");
 }
 
@@ -86,9 +95,9 @@ private void checkAssignmentType(int expected, int type) {
   if (expected == type) return;
 
   SemErr("incompatible types: trying to assign " +
-         SymbolTable.TYPES_INVERSE.get(type) +
+         TYPES_INVERSE.get(type) +
          " value to " +
-         SymbolTable.TYPES_INVERSE.get(expected) +
+         TYPES_INVERSE.get(expected) +
          " variable");
 }
 
@@ -111,16 +120,16 @@ private boolean isLengthAccess() {
  * Functions to keep the code cleaner                                         *
  *----------------------------------------------------------------------------*/
 private SymbolTable.Function newFunction(String name, int type) {
-  SymbolTable.Function fn = st.addFunction(name, type, label_counter++);
-  slx.emit(CommandWord.LAB, fn.label);
+  SymbolTable.Function fn = st.addFunction(name, type, gen.newLabel());
+  gen.emit("LAB", fn.label);//gen.emit("LAB, fn.label);
   st.openScope(fn.type);
   // Address of the scope?
   return fn;
 }
 
 private void functionReturn() {
-  if (st.top_scope.level == 1 && st.top_scope.return_type == st.UNDEFINED) return;
-  slx.emit(CommandWord.RET);
+  if (st.top_scope.level == 1 && st.top_scope.return_type == UNDEFINED) return;
+  gen.emit("RET");
 }
 
 private int safeParseInt(String val) {
@@ -185,10 +194,10 @@ PRODUCTIONS
 
 /*----------------------------------------------------------------------------*/
 
-Compiler                               (. st.openScope(st.UNDEFINED); .)
+Compiler                               (. st.openScope(UNDEFINED); .)
 = FuncDecl
   MainFuncDecl                         (.
-                                          slx.emit(CommandWord.HLT);
+                                          gen.emit("HLT");
                                           st.closeScope();
                                        .)
 .
@@ -197,15 +206,15 @@ Compiler                               (. st.openScope(st.UNDEFINED); .)
 
 MainFuncDecl                           (.
                                           int return_type;
-                                          st.openScope(st.UNDEFINED);
+                                          st.openScope(UNDEFINED);
                                        .)
-= "main"                               (. slx.emit(CommandWord.LAB, MAIN_LABEL); .)
+= "main"                               (. gen.emit("LAB", MAIN_LABEL); .)
   FuncBody<out return_type>
 .
 
 /*----------------------------------------------------------------------------*/
 
-FuncDecl                                (. slx.emit(CommandWord.JMP, MAIN_LABEL); .)
+FuncDecl                                (. gen.emit("JMP", MAIN_LABEL); .)
 =
 {                                       (. int return_type; SymbolTable.Function fn; .)
   FuncHeader<out fn>
@@ -276,14 +285,14 @@ Statement
 =                                         (. int type, if_end; .)
   "if" '(' Expr<out type> ')'             (.
                                              checkBoolean(type, "if statement");
-                                             if_end   = label_counter++;
-                                             slx.emit(CommandWord.JZE, if_end);
+                                             if_end = gen.newLabel();
+                                             gen.emit("JZE", if_end);
                                           .)
-  "then" Statement                        (. slx.emit(CommandWord.LAB, if_end); .)
+  "then" Statement                        (. gen.emit("LAB", if_end); .)
 |                                         (. int type, while_start; .)
   "do"                                    (.
-                                             while_start = label_counter++;
-                                             slx.emit(CommandWord.LAB, while_start);
+                                             while_start = gen.newLabel();
+                                             gen.emit("LAB", while_start);
                                           .)
   Statement
   "while" '('
@@ -291,165 +300,165 @@ Statement
                                              checkBoolean(type, "while condition");
                                              // we don't have jump if command word,
                                              // so need to negate and use jump if not
-                                             slx.emit(CommandWord.NOT);
-                                             slx.emit(CommandWord.JZE, while_start);
+                                             gen.emit("NOT");
+                                             gen.emit("JZE", while_start);
                                           .)
   ')' ';'
 |                                         (. int type; .)
-  "print" '(' Expr<out type> ')' ';'      (. slx.emit(CommandWord.WRI); .)
+  "print" '(' Expr<out type> ')' ';'      (. gen.emit("WRI"); .)
 | "begin" StatementList "end"
-|                                         (. int type, expected; CommandWord cw; .)
+|                                         (. int type, expected; String cw; .)
   IdAccess<out IdAccessData data>
-  '='                                     //(. slx.emit(CommandWord.ENT, var.adr); .)
+  '='                                     //(. gen.emit("ENT", var.adr); .)
                                           // cannot assign to procedure
   Expr<out type>                          (.
-                                             expected = data.local ? data.var.type : st.INTEGER;
+                                             expected = data.local ? data.var.type : INTEGER;
                                              checkAssignmentType(expected, type);
-                                             cw = data.local ? CommandWord.STL : CommandWord.STM;
-                                             slx.emit(cw);
+                                             cw = data.local ? "STL" : "STM";
+                                             gen.emit(cw);
                                           .)
   ';'    // Meaning: assignment
 .
 
 /*----------------------------------------------------------------------------*/
 
-Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
+Expr<out int type>                        (. int t1; type = UNDEFINED; .)
 = RelExpr<out t1>                         (. type = t1; .)
 {                                         (.
                                              int t2;
                                              checkBoolean(t1, "&& operator");
-                                             slx.emit(CommandWord.ENT, 1);
-                                             slx.emit(CommandWord.REQ);
+                                             gen.emit("ENT", 1);
+                                             gen.emit("REQ");
                                           .)
   "&&"
   RelExpr<out t2>                         (.
                                              checkBoolean(t2, "&& operator");
-                                             slx.emit(CommandWord.ENT, 1);
-                                             slx.emit(CommandWord.REQ);
-                                             slx.emit(CommandWord.ADD);
-                                             slx.emit(CommandWord.ENT, 2);
-                                             slx.emit(CommandWord.REQ);
-                                             type = st.BOOLEAN;
+                                             gen.emit("ENT", 1);
+                                             gen.emit("REQ");
+                                             gen.emit("ADD");
+                                             gen.emit("ENT", 2);
+                                             gen.emit("REQ");
+                                             type = BOOLEAN;
                                           .)
 }
 .
 
 /*----------------------------------------------------------------------------*/
 
-RelExpr<out int type>                     (. int t1; type = st.UNDEFINED; .)
+RelExpr<out int type>                     (. int t1; type = UNDEFINED; .)
 = SimExpr<out t1>                         (. type = t1; .)
-{                                         (. int t2; CommandWord op; .)
+{                                         (. int t2; String op; .)
   RelOp<out op>                           (. checkInt(t1, "Relation operator (<, >)"); .)
   SimExpr<out t2>                         (.
                                              checkInt(t2, "Relation operator (<, >)");
-                                             slx.emit(op);
-                                             type = st.BOOLEAN;
+                                             gen.emit(op);
+                                             type = BOOLEAN;
                                           .)
 }
 .
 
 /*----------------------------------------------------------------------------*/
 
-SimExpr<out int type>                     (. type = st.UNDEFINED; .)
+SimExpr<out int type>                     (. type = UNDEFINED; .)
 = '!'                                     (. int t; .)
   SimExpr<out t>                          (.
                                            checkBoolean(t, "! operator");
-                                             slx.emit(CommandWord.NOT);
-                                             type = st.BOOLEAN;
+                                             gen.emit("NOT");
+                                             type = BOOLEAN;
                                           .)
 |                                         (. int t1; .)
   Term<out t1>                            (. type = t1; .)
-{                                         (. int t2; CommandWord op; .)
+{                                         (. int t2; String op; .)
   AddOp<out op>                           (. checkInt(t1, "Add (subtract) operation"); .)
   Term<out t2>                            (.
                                              checkInt(t2, "Add (subtract) operation");
-                                             slx.emit(op);
-                                             type = st.INTEGER;
+                                             gen.emit(op);
+                                             type = INTEGER;
                                           .)
 }
 .
 
 /*----------------------------------------------------------------------------*/
 
-Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
+Term<out int type>                        (. int t1; type = UNDEFINED; .)
 = Factor<out t1>                          (. type = t1; .)
-{                                         (. int t2; CommandWord op; .)
+{                                         (. int t2; String op; .)
   MulOp<out op>                           (. checkInt(t1, "Multiplication (division) operation"); .)
   Factor<out t2>                          (.
                                              checkInt(t2, "Multiplication (division)");
-                                             slx.emit(op);
-                                             type = st.INTEGER;
+                                             gen.emit(op);
+                                             type = INTEGER;
                                           .)
 }
 .
 
 /*----------------------------------------------------------------------------*/
 
-Factor<out int type>                     (. type = st.UNDEFINED; .)
+Factor<out int type>                     (. type = UNDEFINED; .)
 =
 ( IF (isFunctionCall()) FunctionCall<out type>
-|  IF (isLengthAccess())
+| IF (isLengthAccess())
                                          (. IdAccessData data; .)
   IdAccess<out data> '.' "length"        (.
                                             checkArrayType(data.var.type, "array length access");
-                                            slx.emit(CommandWord.LDL);
-                                            slx.emit(CommandWord.LDM);
-                                            type = st.INTEGER;
+                                            gen.emit("LDL");
+                                            gen.emit("LDM");
+                                            type = INTEGER;
                                          .)
 | '(' Expr<out type> ')'
-|                                        (. IdAccessData data; CommandWord cw; .)
+|                                        (. IdAccessData data; String cw; .)
   IdAccess<out data>                     (.
                                             if (data.local) {
                                               type = data.var.type;
-                                              cw = CommandWord.LDL;
+                                              cw = "LDL";
                                             } else {
-                                              type = st.INTEGER;
-                                              cw = CommandWord.LDM;
+                                              type = INTEGER;
+                                              cw = "LDM";
                                             }
-                                            slx.emit(cw);
-                                            //type = st.INTEGER;
+                                            gen.emit(cw);
+                                            //type = INTEGER;
                                          .)
 |                                        (. int val; .)
   integer                                (.
                                             val = safeParseInt(t.val);
-                                            slx.emit(CommandWord.ENT, val);
-                                            type = st.INTEGER;
+                                            gen.emit("ENT", val);
+                                            type = INTEGER;
                                          .)
-| "true"                                 (. slx.emit(CommandWord.ENT, 1); type = st.BOOLEAN; .)
-| "false"                                (. slx.emit(CommandWord.ENT, 0); type = st.BOOLEAN; .)
+| "true"                                 (. gen.emit("ENT", 1); type = BOOLEAN; .)
+| "false"                                (. gen.emit("ENT", 0); type = BOOLEAN; .)
 | "new" "int" '[' Expr<out type> ']'     (.
                                             checkInt(type, "array allocation size");
-                                            type = st.INTEGER_ARRAY;
-                                            slx.emit(CommandWord.ALC);
+                                            type = INTEGER_ARRAY;
+                                            gen.emit("ALC");
                                             // Note that the array length can be negative at the moment
 
                                          .)
-| "read" '(' ')'                         (. slx.emit(CommandWord.REA); .)
+| "read" '(' ')'                         (. gen.emit("REA"); .)
 | '-' Factor<out type>                   (.
                                             checkInt(type, "Negation operator");
-                                            slx.emit(CommandWord.UMN);
+                                            gen.emit("UMN");
                                          .)
 )
 .
 
 /*----------------------------------------------------------------------------*/
 
-AddOp<out CommandWord op>                (. op = CommandWord.ADD; .)
-= '+'                                    (. op = CommandWord.ADD; .)
-| '-'                                    (. op = CommandWord.SUB; .)
+AddOp<out String op>                     (. op = "ADD"; .)
+= '+'                                    (. op = "ADD"; .)
+| '-'                                    (. op = "SUB"; .)
 .
 
 /*----------------------------------------------------------------------------*/
 
-MulOp<out CommandWord op>                (. op = CommandWord.MUL; .)
-= '*'                                    (. op = CommandWord.MUL; .)
-| '/'                                    (. op = CommandWord.DIV; .)
+MulOp<out String op>                (. op = "MUL"; .)
+= '*'                                    (. op = "MUL"; .)
+| '/'                                    (. op = "DIV"; .)
 .
 
 /*----------------------------------------------------------------------------*/
 
-RelOp<out CommandWord op>
-= '<'                                    (. op = CommandWord.RLT; .)
+RelOp<out String op>
+= '<'                                    (. op = "RLT"; .)
 .
 
 /*----------------------------------------------------------------------------*/
@@ -463,17 +472,17 @@ IdAccess<out IdAccessData data>          (.
                                             var = (SymbolTable.Variable)st.findSymbol(name);
                                             data.var = var;
                                             data.local = true;
-                                            slx.emit(CommandWord.ENT, var.adr);
+                                            gen.emit("ENT", var.adr);
                                          .)
 [                                        (. int type; .)
  '['                                     (.
                                             data.local = false;
-                                            slx.emit(CommandWord.LDL);
+                                            gen.emit("LDL");
                                          .)
   Expr<out type>                         (.
-                                            slx.emit(CommandWord.ENT, 1);
-                                            slx.emit(CommandWord.ADD);
-                                            slx.emit(CommandWord.ADD);
+                                            gen.emit("ENT", 1);
+                                            gen.emit("ADD");
+                                            gen.emit("ADD");
                                          .)
   ']'
 ]
@@ -498,8 +507,8 @@ FunctionCall<out int type>              (.
                                         .)
   '(' CallParams<out parameters> ')'    (.
                                            checkCallParameterTypes(fn, parameters);
-                                           slx.emit(CommandWord.SFR, st.top_scope.frame_size);
-                                           slx.emit(CommandWord.SBR, fn.label, parameters.size());
+                                           gen.emit("SFR", st.top_scope.frame_size);
+                                           gen.emit("SBR", fn.label, parameters.size());
                                         .)
 .
 
@@ -520,10 +529,10 @@ CallParams<out ArrayList<Integer>
 
 /*----------------------------------------------------------------------------*/
 
-Type<out int type>                      (. type = st.UNDEFINED; .)
-= "int"                                 (. type = st.INTEGER; .)
-| "int[]"                               (. type = st.INTEGER_ARRAY; .)
-| "boolean"                             (. type = st.BOOLEAN; .)
+Type<out int type>                      (. type = UNDEFINED; .)
+= "int"                                 (. type = INTEGER; .)
+| "int[]"                               (. type = INTEGER_ARRAY; .)
+| "boolean"                             (. type = BOOLEAN; .)
 .
 
 END Compiler.

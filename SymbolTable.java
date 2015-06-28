@@ -1,22 +1,6 @@
 import java.util.*;
 
 public class SymbolTable {
-    public static final int // types
-        UNDEFINED=0, INTEGER=1, BOOLEAN=2, INTEGER_ARRAY=3;
-
-    public static final int // object kinds
-        VARIABLE=0, PROCEDURE=1, SCOPE=2;
-
-    public static final Map<Integer, String> TYPES_INVERSE;
-    static {
-        Map<Integer, String> m = new HashMap<Integer, String>();
-        m.put(0, "undefined");
-        m.put(1, "int");
-        m.put(2, "boolean");
-        m.put(3, "int[]");
-        TYPES_INVERSE = Collections.unmodifiableMap(m);
-    }
-
     int cur_level;	// nesting level of current scope
     Variable undef_var;	// object node for erroneous symbols
     public Scope top_scope;	// topmost procedure scope
@@ -27,7 +11,7 @@ public class SymbolTable {
         this.parser = parser;
         this.top_scope = null; // new Scope();
         this.cur_level = 0;
-        undef_var = new Variable("undef", UNDEFINED);
+        undef_var = new Variable("undef", 0);
         undef_var.adr = 0;
         undef_var.level = 0;
     }
