@@ -421,6 +421,10 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
 
                                          .)
 | "read" '(' ')'                         (. slx.emit(CommandWord.REA); .)
+| '-' Factor<out type>                   (.
+                                            checkInt(type, "Negation operator");
+                                            slx.emit(CommandWord.UMN);
+                                         .)
 )
 .
 
