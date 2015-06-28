@@ -31,6 +31,13 @@ private void checkInt(int type, String operation) {
                                  SymbolTable.TYPES_INVERSE.get(type));
 }
 
+private void checkArrayType(int type, String operation) {
+  if (type != st.INTEGER_ARRAY) SemErr("type error: " +
+                                       operation +
+                                       "expects integer array type, got " +
+                                       SymbolTable.TYPES_INVERSE.get(type));
+}
+
 private void checkCallParameterTypes(SymbolTable.Function fn, ArrayList<Integer> parameters) {
   ArrayList<Integer> expected_types = new ArrayList<Integer>();
   for (int i=0; i<fn.parameters.size(); i++) {
@@ -378,7 +385,14 @@ Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 Factor<out int type>                     (. type = st.UNDEFINED; .)
 =
 ( IF (isFunctionCall()) FunctionCall<out type>
-| IF (isLengthAccess()) identifier '.' "length"
+|  IF (isLengthAccess())
+                                         (. IdAccessData data; .)
+  IdAccess<out data> '.' "length"        (.
+                                            checkArrayType(data.var.type, "array length access");
+                                            slx.emit(CommandWord.LDL);
+                                            slx.emit(CommandWord.LDM);
+                                            type = st.INTEGER;
+                                         .)
 | '(' Expr<out type> ')'
 |                                        (. IdAccessData data; CommandWord cw; .)
   IdAccess<out data>                     (.
