@@ -293,13 +293,13 @@ Statement
 
 Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
 = RelExpr<out t1>                         (. type = t1; .)
-[                                         (.
+{                                         (.
                                              int t2;
                                              checkBoolean(t1, "&& operator");
                                              slx.emit(CommandWord.ENT, 1);
                                              slx.emit(CommandWord.REQ);
                                           .)
-{ "&&"
+  "&&"
   RelExpr<out t2>                         (.
                                              checkBoolean(t2, "&& operator");
                                              slx.emit(CommandWord.ENT, 1);
