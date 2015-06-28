@@ -22,3 +22,25 @@ The implementation steps needed to create the compiler specification:
 </ol>
 
 These parts are discussed in more detail below.
+
+<h3>Grammar modification to LL(1) form</h3>
+
+The initial grammar needs to be converted into LL(1) form, by removing the ambiguities and left recursions, left factoring, and resolving the associativity and precedence of supported operators.
+
+The Expr production has left recursion, and one of the right hand sides has 'op' symbol, which requires resolving associativity and presedence. A new production will be created for each of the operators such that the productions create a recursion, and thus resolves the associativities and presedences.
+
+IdAccess production has to be left-factorized, since both of it's right hand sides begin with identifier. This is resolved by changing the production to:
+
+```
+IdAccess -> identifier | identifier [ Expr ]
+```
+to
+```
+IdAccess -> identifier IdAccessRest
+IdAccessRest -> [ Expr ] |
+```
+
+<h3>Forming the Coco/R productions</h3>
+<h3>Symbol table</h3>
+<h3>Type Checking</h3>
+<h3>Code generator</h3>
