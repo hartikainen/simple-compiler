@@ -365,7 +365,7 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
                                             type = st.INTEGER;
                                          .)
 | "true"                                 (. slx.emit(CommandWord.ENT, 1); type = st.BOOLEAN; .)
-| "false"                                (. slx.emit(CommandWord.ENT, 2); type = st.BOOLEAN; .)
+| "false"                                (. slx.emit(CommandWord.ENT, 0); type = st.BOOLEAN; .)
 | "new" "int" '[' Expr<out type> ']'     (.
                                             checkInt(type, "array allocation size");
                                             type = st.INTEGER_ARRAY;
