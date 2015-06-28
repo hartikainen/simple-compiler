@@ -156,11 +156,15 @@ public class SymbolTable {
 
     public class Function extends Symbol {
         public int label;
-        public ArrayList<Integer> arg_types = new ArrayList<Integer>();
+        public ArrayList<Variable> parameters = new ArrayList<Variable>();
 
         public Function(String name, int type, int label) {
             super(name, type);
             this.label = label;
+        }
+
+        public void addParameter(Variable var) {
+            this.parameters.add(var);
         }
     }
 

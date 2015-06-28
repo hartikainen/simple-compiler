@@ -31,7 +31,11 @@ private void checkInt(int type, String operation) {
 }
 
 private void checkCallParameterTypes(SymbolTable.Function fn, ArrayList<Integer> parameters) {
-  ArrayList<Integer> expected_types = fn.arg_types;;
+  ArrayList<Integer> expected_types = new ArrayList<Integer>();
+  for (int i=0; i<fn.parameters.size(); i++) {
+    expected_types.add(fn.parameters.get(i).type);
+  }
+
   int expected_count = expected_types.size();
   int parameter_count = parameters.size();
 
@@ -202,15 +206,21 @@ FuncDecl//                                (. slx.emit(CommandWord.JMP, 0) .)
 
 FuncHeader<out SymbolTable.Function fn> (. int type; .)
 = Type<out type> identifier             (. fn = newFunction(t.val, type); .)
-  '(' ParamList ')'                      // newFunction opens new scope
+  '(' ParamList<fn> ')'                 // newFunction opens new scope
 .
 
 /*----------------------------------------------------------------------------*/
 
-ParamList                               (. String name; int type; .)
+ParamList<SymbolTable.Function fn>      (. String name; int type; SymbolTable.Variable var; .)
 =
-[ Type<out type> Ident<out name>        (. st.addVariable(t.val, type); .)
-{ ',' Type<out type> Ident<out name>    (. st.addVariable(t.val, type); .)
+[ Type<out type> Ident<out name>        (.
+                                           var = st.addVariable(name, type);
+                                           fn.addParameter(var);
+                                        .)
+{ ',' Type<out type> Ident<out name>    (.
+                                           var = st.addVariable(name, type);
+                                           fn.addParameter(var);
+                                        .)
 }
 ]
 .
@@ -478,7 +488,9 @@ CallParams<out ArrayList<Integer>
                                            parameters = new ArrayList<Integer>();
                                         .)
 = Expr<out type>                        (. parameters.add(type); .)
-{ ',' Expr<out type> }                  (. parameters.add(type); .)
+{
+  ',' Expr<out type>                    (. parameters.add(type); .)
+}
 .
 
 /*----------------------------------------------------------------------------*/
