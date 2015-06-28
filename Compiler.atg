@@ -421,6 +421,7 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
                                             checkInt(type, "array allocation size");
                                             type = st.INTEGER_ARRAY;
                                             slx.emit(CommandWord.ALC);
+                                            // Note that the array length can be negative at the moment
 
                                          .)
 | "read" '(' ')'                         (. slx.emit(CommandWord.REA); .)
@@ -509,10 +510,12 @@ CallParams<out ArrayList<Integer>
                                            int type;
                                            parameters = new ArrayList<Integer>();
                                         .)
-= Expr<out type>                        (. parameters.add(type); .)
+=
+[ Expr<out type>                        (. parameters.add(type); .)
 {
   ',' Expr<out type>                    (. parameters.add(type); .)
 }
+]
 .
 
 /*----------------------------------------------------------------------------*/
