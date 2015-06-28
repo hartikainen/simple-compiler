@@ -9,6 +9,7 @@ public SlxProgram slx;
 
 private Printer printer;
 private int label_counter = 0;
+private int MAIN_LABEL = -1;
 
 
 /*----------------------------------------------------------------------------*
@@ -111,7 +112,7 @@ private SymbolTable.Function newFunction(String name, int type) {
 }
 
 private void functionReturn() {
-  if (st.top_scope.index > 1) slx.emit(CommandWord.RET);
+  if (st.top_scope.index == 1) slx.emit(CommandWord.RET);
   return;
 }
 
@@ -188,13 +189,13 @@ Compiler                               (. st.openScope(st.UNDEFINED); .)
 /*----------------------------------------------------------------------------*/
 
 MainFuncDecl                           (. st.openScope(st.UNDEFINED); int return_type; .)
-= "main"                               (. slx.emit(CommandWord.LAB, label_counter++); .)
+= "main"                               (. slx.emit(CommandWord.LAB, MAIN_LABEL); .)
   FuncBody<out return_type>
 .
 
 /*----------------------------------------------------------------------------*/
 
-FuncDecl//                                (. slx.emit(CommandWord.JMP, 0) .)
+FuncDecl                                (. slx.emit(CommandWord.JMP, MAIN_LABEL); .)
 =
 {                                       (. int return_type; SymbolTable.Function fn; .)
   FuncHeader<out fn>
@@ -470,12 +471,12 @@ FunctionCall<out int type>              (.
                                            SymbolTable.Function fn;
                                         .)
 = Ident<out name>                       (.
-                                           slx.emit(CommandWord.SFR, st.top_scope.frame_size);
                                            fn = (SymbolTable.Function)st.findSymbol(name);
                                            type = fn.type;
                                         .)
   '(' CallParams<out parameters> ')'    (.
                                            checkCallParameterTypes(fn, parameters);
+                                           slx.emit(CommandWord.SFR, st.top_scope.frame_size);
                                            slx.emit(CommandWord.SBR, fn.label, parameters.size());
                                         .)
 .
