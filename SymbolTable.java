@@ -20,14 +20,12 @@ public class SymbolTable {
     int cur_level;	// nesting level of current scope
     Variable undef_var;	// object node for erroneous symbols
     public Scope top_scope;	// topmost procedure scope
-    int scope_counter;
 
     private Parser parser;
 
     public SymbolTable(Parser parser) {
         this.parser = parser;
         this.top_scope = null; // new Scope();
-        this.scope_counter = 0;
         this.cur_level = 0;
         undef_var = new Variable("undef", UNDEFINED);
         undef_var.adr = 0;
