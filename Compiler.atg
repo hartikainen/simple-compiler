@@ -70,14 +70,14 @@ private void checkReturnType(SymbolTable.Function fn, int type) {
          " instead");
 }
 
-private void checkAssignmentType(SymbolTable.Variable var, int type) {
-  if (var.type == type) return;
+private void checkAssignmentType(int expected, int type) {
+  if (expected == type) return;
 
   SemErr("incompatible types: trying to assign " +
          SymbolTable.TYPES_INVERSE.get(type) +
          " value to " +
-         SymbolTable.TYPES_INVERSE.get(var.type)
-         + " variable");
+         SymbolTable.TYPES_INVERSE.get(expected) +
+         " variable");
 }
 
 /*----------------------------------------------------------------------------*
@@ -277,12 +277,13 @@ Statement
 |                                         (. int type; .)
   "print" '(' Expr<out type> ')' ';'      (. slx.emit(CommandWord.WRI); .)
 | "begin" StatementList "end"
-|                                         (. int type; CommandWord cw; .)
+|                                         (. int type, expected; CommandWord cw; .)
   IdAccess<out IdAccessData data>
   '='                                     //(. slx.emit(CommandWord.ENT, var.adr); .)
                                           // cannot assign to procedure
   Expr<out type>                          (.
-                                             checkAssignmentType(data.var, type);
+                                             expected = data.local ? data.var.type : st.INTEGER;
+                                             checkAssignmentType(expected, type);
                                              cw = data.local ? CommandWord.STL : CommandWord.STM;
                                              slx.emit(cw);
                                           .)
@@ -310,7 +311,6 @@ Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
                                              type = st.BOOLEAN;
                                           .)
 }
-]
 .
 
 /*----------------------------------------------------------------------------*/
@@ -371,8 +371,13 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
 | '(' Expr<out type> ')'
 |                                        (. IdAccessData data; CommandWord cw; .)
   IdAccess<out data>                     (.
-                                            type = data.var.type;
-                                            cw = data.local ? CommandWord.LDL : CommandWord.LDM;
+                                            if (data.local) {
+                                              type = data.var.type;
+                                              cw = CommandWord.LDL;
+                                            } else {
+                                              type = st.INTEGER;
+                                              cw = CommandWord.LDM;
+                                            }
                                             slx.emit(cw);
                                             //type = st.INTEGER;
                                          .)
@@ -388,7 +393,6 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
                                             checkInt(type, "array allocation size");
                                             type = st.INTEGER_ARRAY;
                                             slx.emit(CommandWord.ALC);
-                                            slx.emit(CommandWord.STL);
 
                                          .)
 | "read" '(' ')'                         (. slx.emit(CommandWord.REA); .)
