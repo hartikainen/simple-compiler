@@ -344,8 +344,8 @@ Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 Factor<out int type>                     (. type = st.UNDEFINED; .)
 =
 ( IF (isFunctionCall()) FunctionCall<out type>
-| IF (true) identifier '.' "length"      (..)
-  '(' Expr<out type> ')'
+| identifier '.' "length"      (..)
+| '(' Expr<out type> ')'
 |                                        (. String name; SymbolTable.Variable var;.)
   IdAccess<out name>                     (.
                                             var = (SymbolTable.Variable)st.findSymbol(name);
