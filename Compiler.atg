@@ -107,8 +107,8 @@ private SymbolTable.Function newFunction(String name, int type) {
 }
 
 private void functionReturn() {
-  if (st.top_scope.index == 0) return;
-  slx.emit(CommandWord.RET);
+  if (st.top_scope.index > 1) slx.emit(CommandWord.RET);
+  return;
 }
 
 private int safeParseInt(String val) {
@@ -119,6 +119,17 @@ private int safeParseInt(String val) {
     return Integer.MAX_VALUE;
   }
 }
+
+/*----------------------------------------------------------------------------*
+ * Weird 'struct' for passing the IdAccess data.                              *
+ * This might neither be a good practice in Java, nor a good way to pass the  *
+ * IdAccess data. However this feels the most intuitive right now.            *
+ *----------------------------------------------------------------------------*/
+private class IdAccessData {
+  public boolean local; // 'local' or 'dynamic'
+  public SymbolTable.Variable var; // The variable in question
+}
+
 
 CHARACTERS
   cr  = '\r'.
@@ -266,14 +277,14 @@ Statement
 |                                         (. int type; .)
   "print" '(' Expr<out type> ')' ';'      (. slx.emit(CommandWord.WRI); .)
 | "begin" StatementList "end"
-|                                         (. String name; int type; SymbolTable.Variable var; .)
-  IdAccess<out name>                      (. var = (SymbolTable.Variable) st.findSymbol(name); .)
-  '='                                     (. slx.emit(CommandWord.ENT, var.adr); .)
+|                                         (. int type; CommandWord cw; .)
+  IdAccess<out IdAccessData data>
+  '='                                     //(. slx.emit(CommandWord.ENT, var.adr); .)
                                           // cannot assign to procedure
   Expr<out type>                          (.
-                                             checkAssignmentType(var, type);
-
-                                             slx.emit(CommandWord.STL);
+                                             checkAssignmentType(data.var, type);
+                                             cw = data.local ? CommandWord.STL : CommandWord.STM;
+                                             slx.emit(cw);
                                           .)
   ';'    // Meaning: assignment
 .
@@ -282,16 +293,24 @@ Statement
 
 Expr<out int type>                        (. int t1; type = st.UNDEFINED; .)
 = RelExpr<out t1>                         (. type = t1; .)
-{                                         (. int t2; .)
-  "&&"                                    (. checkBoolean(t1, "&& operator"); .)
+[                                         (.
+                                             int t2;
+                                             checkBoolean(t1, "&& operator");
+                                             slx.emit(CommandWord.ENT, 1);
+                                             slx.emit(CommandWord.REQ);
+                                          .)
+{ "&&"
   RelExpr<out t2>                         (.
                                              checkBoolean(t2, "&& operator");
-                                             slx.emit(CommandWord.REQ);
                                              slx.emit(CommandWord.ENT, 1);
+                                             slx.emit(CommandWord.REQ);
+                                             slx.emit(CommandWord.ADD);
+                                             slx.emit(CommandWord.ENT, 2);
                                              slx.emit(CommandWord.REQ);
                                              type = st.BOOLEAN;
                                           .)
 }
+]
 .
 
 /*----------------------------------------------------------------------------*/
@@ -350,12 +369,11 @@ Factor<out int type>                     (. type = st.UNDEFINED; .)
 ( IF (isFunctionCall()) FunctionCall<out type>
 | IF (isLengthAccess()) identifier '.' "length"
 | '(' Expr<out type> ')'
-|                                        (. String name; SymbolTable.Variable var;.)
-  IdAccess<out name>                     (.
-                                            var = (SymbolTable.Variable)st.findSymbol(name);
-                                            type = var.type;
-                                            // slx.emit(CommandWord.ENT, var.adr);
-                                            // slx.emit(CommandWord.LDM);
+|                                        (. IdAccessData data; CommandWord cw; .)
+  IdAccess<out data>                     (.
+                                            type = data.var.type;
+                                            cw = data.local ? CommandWord.LDL : CommandWord.LDM;
+                                            slx.emit(cw);
                                             //type = st.INTEGER;
                                          .)
 |                                        (. int val; .)
@@ -399,14 +417,28 @@ RelOp<out CommandWord op>
 
 /*----------------------------------------------------------------------------*/
 
-IdAccess<out String name>                (. SymbolTable.Variable var; .)
+IdAccess<out IdAccessData data>          (.
+                                            String name;
+                                            SymbolTable.Variable var;
+                                            data = new IdAccessData();
+                                         .)
 = Ident<out name>                        (.
                                             var = (SymbolTable.Variable)st.findSymbol(name);
+                                            data.var = var;
+                                            data.local = true;
                                             slx.emit(CommandWord.ENT, var.adr);
-                                            slx.emit(CommandWord.LDL);
                                          .)
 [                                        (. int type; .)
-  '[' Expr<out type> ']'
+ '['                                     (.
+                                            data.local = false;
+                                            slx.emit(CommandWord.LDL);
+                                         .)
+  Expr<out type>                         (.
+                                            slx.emit(CommandWord.ENT, 1);
+                                            slx.emit(CommandWord.ADD);
+                                            slx.emit(CommandWord.ADD);
+                                         .)
+  ']'
 ]
 .
 
