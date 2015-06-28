@@ -87,8 +87,12 @@ private void checkAssignmentType(SymbolTable.Variable var, int type) {
 
 private boolean isFunctionCall() {
   scanner.ResetPeek();
-
   return (la.kind == _identifier && scanner.Peek().kind == _lpar);
+}
+
+private boolean isLengthAccess() {
+  scanner.ResetPeek();
+  return (la.kind == _identifier && scanner.Peek().kind == _dot);
 }
 
 /*----------------------------------------------------------------------------*
@@ -344,7 +348,7 @@ Term<out int type>                        (. int t1; type = st.UNDEFINED; .)
 Factor<out int type>                     (. type = st.UNDEFINED; .)
 =
 ( IF (isFunctionCall()) FunctionCall<out type>
-| identifier '.' "length"      (..)
+| IF (isLengthAccess()) identifier '.' "length"
 | '(' Expr<out type> ')'
 |                                        (. String name; SymbolTable.Variable var;.)
   IdAccess<out name>                     (.
