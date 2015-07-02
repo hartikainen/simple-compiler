@@ -335,9 +335,7 @@ Expr<out int type>                        (. int t1; type = UNDEFINED; .)
                                              checkBoolean(t2, "&& operator");
                                              gen.emit("ENT", 1);
                                              gen.emit("REQ");
-                                             gen.emit("ADD");
-                                             gen.emit("ENT", 2);
-                                             gen.emit("REQ");
+                                             gen.emit("MUL");
                                              type = BOOLEAN;
                                           .)
 }
