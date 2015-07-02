@@ -43,7 +43,7 @@ In the Factor non-terminal (in the final Compiler.atg), I have resolved to confl
 Once the grammar is in LL(1) form, it can be written in the Coco/R readable form. The resulting productions can be found in the file Compiler.atg. This file will also be the place for all the Coco/R specifications and helper functions to guide the parsing. More informations of the Coco/R productions can be found at [http://www.ssw.uni-linz.ac.at/coco/Doc/UserManual.pdf].
 
 <h3>Symbol table</h3>
-The symbol table is used to keep track of the necessary info of the variables and functions. This data will be used for type checking and code generation. My implementation is heavily based on the symbol table example found from [http://www.ssw.uni-linz.ac.at/coco/CPP/Taste.zip]. However, I some Java specific implementation decisions have been made.
+The symbol table is used to keep track of the necessary info of the variables and functions. This data will be used for type checking and code generation. My implementation is heavily based on the symbol table example found from [http://www.ssw.uni-linz.ac.at/coco/CPP/Taste.zip]. However, some Java specific implementation decisions have been made.
 
 The SymbolTable class includes openScope, closeScope, addFunction, addVariable and findSymbol functions which are used to handle the function scopes, variables and functions during the parsing. The SymbolTable instance keeps track of the current top-most scope. Each time a new scope is opened, it's assigned to the SymbolTable's top_scope variable. Each scope has a reference ('next') to the scope it was created at.
 

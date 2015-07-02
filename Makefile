@@ -12,6 +12,7 @@ clean:
 
 coco-clean: clean
 	rm Parser.java Scanner.java
+	rm Parser.java.old Scanner.java.old
 
 easy-test:
 	@echo
